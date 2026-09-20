@@ -70,6 +70,7 @@ function isAcceptedFile(file, acceptedExtensions, acceptedMimePrefix) {
 function serializeSong(song) {
   return {
     id: song.id,
+    userId: song.userId,
     title: song.title,
     artistName: song.artistName,
     tags: song.tags,
@@ -79,6 +80,18 @@ function serializeSong(song) {
     coverOriginalName: song.coverOriginalName,
     createdAt: song.createdAt,
     updatedAt: song.updatedAt,
+    artist: song.artist || null,
+  };
+}
+
+function serializeArtist(artist) {
+  return {
+    id: artist.id,
+    displayName: artist.displayName,
+    songCount: artist.songCount,
+    followerCount: artist.followerCount,
+    isFollowing: artist.isFollowing,
+    isSelf: artist.isSelf,
   };
 }
 
@@ -254,6 +267,85 @@ export function createApp({ database, uploadsPath }) {
     response.status(204).send();
   });
 
+  app.get("/api/artists/search", (request, response, next) => {
+    try {
+      const viewer = getCurrentUser(request);
+      const query = String(request.query.q || "").trim();
+
+      if (!query) {
+        return response.status(200).json({ artists: [] });
+      }
+
+      const artists = database.searchArtists(query, viewer?.id || null).map(serializeArtist);
+
+      return response.status(200).json({ artists });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/artists/:artistId", (request, response, next) => {
+    try {
+      const viewer = getCurrentUser(request);
+      const artist = database.findArtistById(request.params.artistId, viewer?.id || null);
+
+      if (!artist) {
+        throw createHttpError("Artist not found.", 404);
+      }
+
+      const songs = database.listSongsByArtistId(artist.id).map(serializeSong);
+
+      response.status(200).json({
+        artist: serializeArtist(artist),
+        songs,
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post("/api/artists/:artistId/follow", (request, response, next) => {
+    try {
+      const user = requireCurrentUser(request);
+      const artist = database.findUserById(request.params.artistId);
+
+      if (!artist) {
+        throw createHttpError("Artist not found.", 404);
+      }
+
+      if (artist.id === user.id) {
+        throw createHttpError("You cannot follow yourself.", 400);
+      }
+
+      database.followArtist(user.id, artist.id);
+
+      response.status(200).json({
+        artist: serializeArtist(database.findArtistById(artist.id, user.id)),
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.delete("/api/artists/:artistId/follow", (request, response, next) => {
+    try {
+      const user = requireCurrentUser(request);
+      const artist = database.findUserById(request.params.artistId);
+
+      if (!artist) {
+        throw createHttpError("Artist not found.", 404);
+      }
+
+      database.unfollowArtist(user.id, artist.id);
+
+      response.status(200).json({
+        artist: serializeArtist(database.findArtistById(artist.id, user.id)),
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.get("/api/songs/mine", (request, response, next) => {
     try {
       const user = requireCurrentUser(request);
@@ -264,6 +356,20 @@ export function createApp({ database, uploadsPath }) {
         limit: MAX_SONGS_PER_USER,
         remaining: Math.max(MAX_SONGS_PER_USER - songs.length, 0),
       });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get("/api/songs/random", (_request, response, next) => {
+    try {
+      const song = database.findRandomSong();
+
+      if (!song) {
+        return response.status(200).json({ song: null });
+      }
+
+      return response.status(200).json({ song: serializeSong(song) });
     } catch (error) {
       next(error);
     }

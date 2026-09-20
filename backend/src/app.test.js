@@ -204,3 +204,85 @@ describe("song endpoints", () => {
     fs.rmSync(uploadsPath, { recursive: true, force: true });
   });
 });
+
+describe("discovery endpoints", () => {
+  it("searches artists, follows them, shows their page, and returns a random song", async () => {
+    const { app, database, uploadsPath, token, user } = await createAuthenticatedApp();
+
+    await request(app)
+      .post("/api/songs")
+      .set("Authorization", `Bearer ${token}`)
+      .field("title", "Hidden Frequency")
+      .field("artistName", user.displayName)
+      .field("tags", "#ambient")
+      .attach("audioFile", Buffer.from("fake discovery mp3"), {
+        filename: "hidden-frequency.mp3",
+        contentType: "audio/mpeg",
+      });
+
+    const searchResponse = await request(app).get("/api/artists/search?q=Creator");
+
+    expect(searchResponse.status).toBe(200);
+    expect(searchResponse.body.artists[0]).toMatchObject({
+      id: user.id,
+      displayName: user.displayName,
+      songCount: 1,
+      followerCount: 0,
+    });
+
+    const artistResponse = await request(app).get(`/api/artists/${user.id}`);
+
+    expect(artistResponse.status).toBe(200);
+    expect(artistResponse.body.songs).toHaveLength(1);
+    expect(artistResponse.body.songs[0].title).toBe("Hidden Frequency");
+
+    const listenerResponse = await request(app)
+      .post("/api/auth/register")
+      .send({
+        displayName: "Listener",
+        email: `listener-${randomUUID()}@example.com`,
+        password: "password123",
+      });
+    const listenerToken = listenerResponse.body.token;
+
+    const followResponse = await request(app)
+      .post(`/api/artists/${user.id}/follow`)
+      .set("Authorization", `Bearer ${listenerToken}`);
+
+    expect(followResponse.status).toBe(200);
+    expect(followResponse.body.artist).toMatchObject({
+      followerCount: 1,
+      isFollowing: true,
+    });
+
+    const followedArtistResponse = await request(app)
+      .get(`/api/artists/${user.id}`)
+      .set("Authorization", `Bearer ${listenerToken}`);
+
+    expect(followedArtistResponse.body.artist.isFollowing).toBe(true);
+
+    const randomResponse = await request(app).get("/api/songs/random");
+
+    expect(randomResponse.status).toBe(200);
+    expect(randomResponse.body.song).toMatchObject({
+      title: "Hidden Frequency",
+      artist: {
+        id: user.id,
+        displayName: user.displayName,
+      },
+    });
+
+    const unfollowResponse = await request(app)
+      .delete(`/api/artists/${user.id}/follow`)
+      .set("Authorization", `Bearer ${listenerToken}`);
+
+    expect(unfollowResponse.status).toBe(200);
+    expect(unfollowResponse.body.artist).toMatchObject({
+      followerCount: 0,
+      isFollowing: false,
+    });
+
+    database.close();
+    fs.rmSync(uploadsPath, { recursive: true, force: true });
+  });
+});

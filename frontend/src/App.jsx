@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, Route, Routes, useNavigate } from "react-router-dom";
+import { Link, Route, Routes, useNavigate, useParams } from "react-router-dom";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
 const AUTH_TOKEN_STORAGE_KEY = "neo-musica-token";
@@ -35,7 +35,128 @@ function getAssetUrl(path) {
   return path ? `${API_BASE_URL}${path}` : "";
 }
 
-function HomePage() {
+function PublicSongList({ songs }) {
+  if (songs.length === 0) {
+    return <p className="empty-state">No songs uploaded yet.</p>;
+  }
+
+  return (
+    <div className="song-list">
+      {songs.map((song) => (
+        <article className="song-item" key={song.id}>
+          {song.coverUrl ? (
+            <img src={getAssetUrl(song.coverUrl)} alt={`${song.title} cover`} />
+          ) : (
+            <div className="song-cover-placeholder">♪</div>
+          )}
+          <div className="song-details">
+            <h3>{song.title}</h3>
+            <p>{song.artistName}</p>
+            {song.tags.length > 0 ? (
+              <div className="tag-list">
+                {song.tags.map((tag) => (
+                  <span key={tag}>{tag}</span>
+                ))}
+              </div>
+            ) : null}
+            <audio controls src={getAssetUrl(song.audioUrl)} />
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function RandomSongPlayer() {
+  const [song, setSong] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function loadRandomSong() {
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const data = await requestJson("/api/songs/random");
+      setSong(data.song);
+    } catch (randomError) {
+      setError(randomError.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadRandomSong();
+  }, []);
+
+  return (
+    <section className="random-player-panel">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Random discovery</p>
+          <h2>Press play, then move forward</h2>
+        </div>
+        <button type="button" onClick={loadRandomSong} disabled={isLoading}>
+          {isLoading ? "Loading..." : song ? "Next song" : "Find a song"}
+        </button>
+      </div>
+      {error ? <p className="form-error">{error}</p> : null}
+      {song ? (
+        <article className="random-song-card">
+          {song.coverUrl ? (
+            <img src={getAssetUrl(song.coverUrl)} alt={`${song.title} cover`} />
+          ) : (
+            <div className="song-cover-placeholder">♪</div>
+          )}
+          <div className="song-details">
+            <h3>{song.title}</h3>
+            <p>
+              <Link className="text-link" to={`/artists/${song.artist?.id}`}>
+                {song.artistName}
+              </Link>
+            </p>
+            {song.tags.length > 0 ? (
+              <div className="tag-list">
+                {song.tags.map((tag) => (
+                  <span key={tag}>{tag}</span>
+                ))}
+              </div>
+            ) : null}
+            <audio controls src={getAssetUrl(song.audioUrl)} />
+          </div>
+        </article>
+      ) : (
+        <p className="empty-state">No songs are available yet.</p>
+      )}
+    </section>
+  );
+}
+
+function HomePage({ authToken }) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [artists, setArtists] = useState([]);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSearch(event) {
+    event.preventDefault();
+    setError("");
+    setHasSearched(true);
+
+    try {
+      const data = await requestJson(
+        `/api/artists/search?q=${encodeURIComponent(searchQuery.trim())}`,
+        {
+          headers: getAuthHeaders(authToken),
+        },
+      );
+      setArtists(data.artists);
+    } catch (searchError) {
+      setError(searchError.message);
+    }
+  }
+
   return (
     <main className="page-shell">
       <section className="hero">
@@ -46,6 +167,41 @@ function HomePage() {
           recognition for unknown artists who are still waiting to be found.
         </p>
       </section>
+      <section className="discovery-panel">
+        <form className="artist-search-form" onSubmit={handleSearch}>
+          <label htmlFor="artist-search">Search artists</label>
+          <div>
+            <input
+              id="artist-search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Try a display name"
+            />
+            <button type="submit">Search</button>
+          </div>
+        </form>
+        {error ? <p className="form-error">{error}</p> : null}
+        {hasSearched ? (
+          <div className="artist-results">
+            {artists.length === 0 ? (
+              <p className="empty-state">No artists found.</p>
+            ) : (
+              artists.map((artist) => (
+                <Link className="artist-result" to={`/artists/${artist.id}`} key={artist.id}>
+                  <span>{artist.displayName.slice(0, 1).toUpperCase()}</span>
+                  <div>
+                    <strong>{artist.displayName}</strong>
+                    <p>
+                      {artist.songCount} songs · {artist.followerCount} followers
+                    </p>
+                  </div>
+                </Link>
+              ))
+            )}
+          </div>
+        ) : null}
+      </section>
+      <RandomSongPlayer />
     </main>
   );
 }
@@ -470,6 +626,109 @@ function SongUploadPage({ currentUser, authToken }) {
   );
 }
 
+function ArtistPage({ currentUser, authToken }) {
+  const { artistId } = useParams();
+  const [artist, setArtist] = useState(null);
+  const [songs, setSongs] = useState([]);
+  const [error, setError] = useState("");
+  const [isFollowing, setIsFollowing] = useState(false);
+
+  async function loadArtist() {
+    try {
+      const data = await requestJson(`/api/artists/${artistId}`, {
+        headers: getAuthHeaders(authToken),
+      });
+      setArtist(data.artist);
+      setSongs(data.songs);
+      setIsFollowing(data.artist.isFollowing);
+      setError("");
+    } catch (artistError) {
+      setError(artistError.message);
+    }
+  }
+
+  useEffect(() => {
+    loadArtist();
+  }, [artistId, authToken]);
+
+  async function handleFollowToggle() {
+    if (!artist) {
+      return;
+    }
+
+    try {
+      const data = await requestJson(`/api/artists/${artist.id}/follow`, {
+        method: isFollowing ? "DELETE" : "POST",
+        headers: getAuthHeaders(authToken),
+      });
+      setArtist(data.artist);
+      setIsFollowing(data.artist.isFollowing);
+    } catch (followError) {
+      setError(followError.message);
+    }
+  }
+
+  if (error && !artist) {
+    return (
+      <main className="page-shell">
+        <section className="content-panel">
+          <h1>Artist</h1>
+          <p className="form-error">{error}</p>
+        </section>
+      </main>
+    );
+  }
+
+  if (!artist) {
+    return (
+      <main className="page-shell">
+        <section className="content-panel">
+          <h1>Artist</h1>
+          <p>Loading...</p>
+        </section>
+      </main>
+    );
+  }
+
+  return (
+    <main className="page-shell">
+      <section className="content-panel artist-profile-panel">
+        <div className="artist-profile-header">
+          <div className="artist-avatar">{artist.displayName.slice(0, 1).toUpperCase()}</div>
+          <div>
+            <p className="eyebrow">Artist</p>
+            <h1>{artist.displayName}</h1>
+            <p>
+              {artist.songCount} songs · {artist.followerCount} followers
+            </p>
+          </div>
+        </div>
+        {artist.isSelf ? (
+          <Link className="text-link" to="/profile">
+            Manage your profile
+          </Link>
+        ) : currentUser ? (
+          <button type="button" className="follow-button" onClick={handleFollowToggle}>
+            {isFollowing ? "Following" : "Follow"}
+          </button>
+        ) : (
+          <Link className="text-link" to="/login">
+            Login to follow
+          </Link>
+        )}
+        {error ? <p className="form-error">{error}</p> : null}
+        <div className="library-header">
+          <div>
+            <h2>Music</h2>
+            <p>{songs.length} tracks available</p>
+          </div>
+        </div>
+        <PublicSongList songs={songs} />
+      </section>
+    </main>
+  );
+}
+
 function NotFoundPage() {
   return (
     <main className="page-shell">
@@ -562,7 +821,7 @@ export default function App() {
         </Link>
       ) : null}
       <Routes>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={<HomePage authToken={authToken} />} />
         <Route path="/about" element={<AboutPage />} />
         <Route
           path="/login"
@@ -579,6 +838,10 @@ export default function App() {
         <Route
           path="/songs/new"
           element={<SongUploadPage currentUser={currentUser} authToken={authToken} />}
+        />
+        <Route
+          path="/artists/:artistId"
+          element={<ArtistPage currentUser={currentUser} authToken={authToken} />}
         />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
