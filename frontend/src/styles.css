@@ -116,48 +116,29 @@ button:hover {
 
 .cover-marquee {
   position: fixed;
-  inset: 92px 0 auto 0;
+  inset: 0;
   z-index: -1;
-  height: 148px;
   overflow: hidden;
-  opacity: 0.22;
+  opacity: 0.55;
   pointer-events: none;
 }
 
-.cover-marquee::before,
-.cover-marquee::after {
-  position: absolute;
-  top: 0;
-  z-index: 1;
-  width: 120px;
-  height: 100%;
-  content: "";
-}
-
-.cover-marquee::before {
-  left: 0;
-  background: linear-gradient(90deg, #f5f7fb, rgba(245, 247, 251, 0));
-}
-
-.cover-marquee::after {
-  right: 0;
-  background: linear-gradient(270deg, #f5f7fb, rgba(245, 247, 251, 0));
-}
-
 .cover-marquee-track {
-  display: flex;
-  gap: 18px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(6, 1fr);
+  gap: 0;
+  height: 100vh;
   width: max-content;
-  animation: cover-marquee-slide 26s linear infinite;
+  animation: cover-marquee-slide 38s linear infinite;
 }
 
 .cover-marquee-track img {
-  width: 132px;
-  height: 132px;
+  width: calc(100vh / 6);
+  height: calc(100vh / 6);
   flex: 0 0 auto;
-  border-radius: 8px;
+  border-radius: 0;
   object-fit: cover;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
 }
 
 @keyframes cover-marquee-slide {
@@ -578,17 +559,17 @@ p {
   }
 
   .cover-marquee {
-    inset: 148px 0 auto 0;
-    height: 112px;
+    inset: 0;
   }
 
   .cover-marquee-track {
-    gap: 12px;
+    grid-template-rows: repeat(8, 1fr);
+    height: 100vh;
   }
 
   .cover-marquee-track img {
-    width: 96px;
-    height: 96px;
+    width: calc(100vh / 8);
+    height: calc(100vh / 8);
   }
 
   .library-header,
