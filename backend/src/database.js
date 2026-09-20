@@ -29,6 +29,26 @@ function toUser(row) {
   };
 }
 
+function toSong(row) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    userId: row.user_id,
+    title: row.title,
+    artistName: row.artist_name,
+    tags: row.tags ? JSON.parse(row.tags) : [],
+    audioFilePath: row.audio_file_path,
+    coverFilePath: row.cover_file_path,
+    audioOriginalName: row.audio_original_name,
+    coverOriginalName: row.cover_original_name,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 function getFirstRow(database, sql, params = {}) {
   const statement = database.prepare(sql);
 
@@ -50,6 +70,23 @@ function run(database, sql, params = {}) {
 
   try {
     statement.run(params);
+  } finally {
+    statement.free();
+  }
+}
+
+function getRows(database, sql, params = {}) {
+  const statement = database.prepare(sql);
+  const rows = [];
+
+  try {
+    statement.bind(params);
+
+    while (statement.step()) {
+      rows.push(statement.getAsObject());
+    }
+
+    return rows;
   } finally {
     statement.free();
   }
@@ -93,6 +130,23 @@ export async function createDatabase({ databasePath } = {}) {
 
     CREATE INDEX IF NOT EXISTS sessions_token_hash_index ON sessions(token_hash);
     CREATE INDEX IF NOT EXISTS sessions_user_id_index ON sessions(user_id);
+
+    CREATE TABLE IF NOT EXISTS songs (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      artist_name TEXT NOT NULL,
+      tags TEXT NOT NULL DEFAULT '[]',
+      audio_file_path TEXT NOT NULL,
+      cover_file_path TEXT,
+      audio_original_name TEXT NOT NULL,
+      cover_original_name TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS songs_user_id_index ON songs(user_id);
   `);
   persist();
 
@@ -171,6 +225,127 @@ export async function createDatabase({ databasePath } = {}) {
         $tokenHash: tokenHash,
       });
       persist();
+    },
+
+    countSongsForUser(userId) {
+      const row = getFirstRow(
+        database,
+        "SELECT COUNT(*) AS count FROM songs WHERE user_id = $userId",
+        {
+          $userId: userId,
+        },
+      );
+
+      return Number(row?.count || 0);
+    },
+
+    listSongsByUserId(userId) {
+      return getRows(
+        database,
+        `
+          SELECT id, user_id, title, artist_name, tags, audio_file_path, cover_file_path,
+            audio_original_name, cover_original_name, created_at, updated_at
+          FROM songs
+          WHERE user_id = $userId
+          ORDER BY created_at DESC
+        `,
+        { $userId: userId },
+      ).map(toSong);
+    },
+
+    findSongByIdAndUserId(id, userId) {
+      return toSong(
+        getFirstRow(
+          database,
+          `
+            SELECT id, user_id, title, artist_name, tags, audio_file_path, cover_file_path,
+              audio_original_name, cover_original_name, created_at, updated_at
+            FROM songs
+            WHERE id = $id AND user_id = $userId
+          `,
+          { $id: id, $userId: userId },
+        ),
+      );
+    },
+
+    createSong({
+      id,
+      userId,
+      title,
+      artistName,
+      tags,
+      audioFilePath,
+      coverFilePath,
+      audioOriginalName,
+      coverOriginalName,
+    }) {
+      run(
+        database,
+        `
+          INSERT INTO songs (
+            id, user_id, title, artist_name, tags, audio_file_path, cover_file_path,
+            audio_original_name, cover_original_name
+          )
+          VALUES (
+            $id, $userId, $title, $artistName, $tags, $audioFilePath, $coverFilePath,
+            $audioOriginalName, $coverOriginalName
+          )
+        `,
+        {
+          $id: id,
+          $userId: userId,
+          $title: title,
+          $artistName: artistName,
+          $tags: JSON.stringify(tags),
+          $audioFilePath: audioFilePath,
+          $coverFilePath: coverFilePath,
+          $audioOriginalName: audioOriginalName,
+          $coverOriginalName: coverOriginalName,
+        },
+      );
+      persist();
+
+      return this.findSongByIdAndUserId(id, userId);
+    },
+
+    updateSong({ id, userId, title, artistName, tags }) {
+      run(
+        database,
+        `
+          UPDATE songs
+          SET title = $title,
+            artist_name = $artistName,
+            tags = $tags,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = $id AND user_id = $userId
+        `,
+        {
+          $id: id,
+          $userId: userId,
+          $title: title,
+          $artistName: artistName,
+          $tags: JSON.stringify(tags),
+        },
+      );
+      persist();
+
+      return this.findSongByIdAndUserId(id, userId);
+    },
+
+    deleteSong(id, userId) {
+      const song = this.findSongByIdAndUserId(id, userId);
+
+      if (!song) {
+        return null;
+      }
+
+      run(database, "DELETE FROM songs WHERE id = $id AND user_id = $userId", {
+        $id: id,
+        $userId: userId,
+      });
+      persist();
+
+      return song;
     },
 
     close() {

@@ -5,9 +5,10 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000
 const AUTH_TOKEN_STORAGE_KEY = "neo-musica-token";
 
 async function requestJson(path, options = {}) {
+  const isFormData = options.body instanceof FormData;
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
-      "Content-Type": "application/json",
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...options.headers,
     },
     ...options,
@@ -24,6 +25,14 @@ async function requestJson(path, options = {}) {
   }
 
   return data;
+}
+
+function getAuthHeaders(authToken) {
+  return authToken ? { Authorization: `Bearer ${authToken}` } : {};
+}
+
+function getAssetUrl(path) {
+  return path ? `${API_BASE_URL}${path}` : "";
 }
 
 function HomePage() {
@@ -127,7 +136,72 @@ function AuthPage({ mode, onAuthSuccess }) {
   );
 }
 
-function ProfilePage({ currentUser }) {
+function ProfilePage({ currentUser, authToken }) {
+  const [songs, setSongs] = useState([]);
+  const [songLimit, setSongLimit] = useState(10);
+  const [error, setError] = useState("");
+  const [editingSongId, setEditingSongId] = useState(null);
+  const [editForm, setEditForm] = useState({ title: "", artistName: "", tags: "" });
+
+  async function loadSongs() {
+    if (!authToken) {
+      setSongs([]);
+      return;
+    }
+
+    try {
+      const data = await requestJson("/api/songs/mine", {
+        headers: getAuthHeaders(authToken),
+      });
+      setSongs(data.songs);
+      setSongLimit(data.limit);
+      setError("");
+    } catch (songsError) {
+      setError(songsError.message);
+    }
+  }
+
+  useEffect(() => {
+    loadSongs();
+  }, [authToken]);
+
+  function startEditing(song) {
+    setEditingSongId(song.id);
+    setEditForm({
+      title: song.title,
+      artistName: song.artistName,
+      tags: song.tags.join(" "),
+    });
+  }
+
+  async function handleEditSubmit(event, songId) {
+    event.preventDefault();
+
+    try {
+      await requestJson(`/api/songs/${songId}`, {
+        method: "PATCH",
+        headers: getAuthHeaders(authToken),
+        body: JSON.stringify(editForm),
+      });
+      setEditingSongId(null);
+      await loadSongs();
+    } catch (editError) {
+      setError(editError.message);
+    }
+  }
+
+  async function handleDelete(songId) {
+    try {
+      await requestJson(`/api/songs/${songId}`, {
+        method: "DELETE",
+        headers: getAuthHeaders(authToken),
+      });
+      await loadSongs();
+    } catch (deleteError) {
+      setError(deleteError.message);
+    }
+  }
+
   if (!currentUser) {
     return (
       <main className="page-shell">
@@ -155,6 +229,242 @@ function ProfilePage({ currentUser }) {
             <p>Profile customization and listener points can grow from here next.</p>
           </div>
         </div>
+        <div className="library-header">
+          <div>
+            <h2>Your songs</h2>
+            <p>
+              {songs.length} of {songLimit} uploads used
+            </p>
+          </div>
+          <Link className="text-link" to="/songs/new">
+            Add song
+          </Link>
+        </div>
+        {error ? <p className="form-error">{error}</p> : null}
+        <div className="song-list">
+          {songs.length === 0 ? (
+            <p className="empty-state">No songs uploaded yet.</p>
+          ) : (
+            songs.map((song) => (
+              <article className="song-item" key={song.id}>
+                {song.coverUrl ? (
+                  <img src={getAssetUrl(song.coverUrl)} alt={`${song.title} cover`} />
+                ) : (
+                  <div className="song-cover-placeholder">♪</div>
+                )}
+                <div className="song-details">
+                  {editingSongId === song.id ? (
+                    <form
+                      className="song-edit-form"
+                      onSubmit={(event) => handleEditSubmit(event, song.id)}
+                    >
+                      <input
+                        aria-label="Song title"
+                        value={editForm.title}
+                        onChange={(event) =>
+                          setEditForm((current) => ({ ...current, title: event.target.value }))
+                        }
+                        required
+                      />
+                      <input
+                        aria-label="Artist name"
+                        value={editForm.artistName}
+                        onChange={(event) =>
+                          setEditForm((current) => ({ ...current, artistName: event.target.value }))
+                        }
+                        required
+                      />
+                      <input
+                        aria-label="Tags"
+                        value={editForm.tags}
+                        onChange={(event) =>
+                          setEditForm((current) => ({ ...current, tags: event.target.value }))
+                        }
+                      />
+                      <div className="song-actions">
+                        <button type="submit">Save</button>
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={() => setEditingSongId(null)}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <>
+                      <h3>{song.title}</h3>
+                      <p>{song.artistName}</p>
+                      {song.tags.length > 0 ? (
+                        <div className="tag-list">
+                          {song.tags.map((tag) => (
+                            <span key={tag}>{tag}</span>
+                          ))}
+                        </div>
+                      ) : null}
+                      <audio controls src={getAssetUrl(song.audioUrl)} />
+                      <div className="song-actions">
+                        <button type="button" onClick={() => startEditing(song)}>
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="danger-button"
+                          onClick={() => handleDelete(song.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </article>
+            ))
+          )}
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function SongUploadPage({ currentUser, authToken }) {
+  const navigate = useNavigate();
+  const [songs, setSongs] = useState([]);
+  const [songLimit, setSongLimit] = useState(10);
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function loadSongs() {
+    if (!authToken) {
+      setSongs([]);
+      return;
+    }
+
+    try {
+      const data = await requestJson("/api/songs/mine", {
+        headers: getAuthHeaders(authToken),
+      });
+      setSongs(data.songs);
+      setSongLimit(data.limit);
+    } catch (songsError) {
+      setError(songsError.message);
+    }
+  }
+
+  useEffect(() => {
+    loadSongs();
+  }, [authToken]);
+
+  async function handleDelete(songId) {
+    try {
+      await requestJson(`/api/songs/${songId}`, {
+        method: "DELETE",
+        headers: getAuthHeaders(authToken),
+      });
+      await loadSongs();
+    } catch (deleteError) {
+      setError(deleteError.message);
+    }
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      const formData = new FormData(event.currentTarget);
+      await requestJson("/api/songs", {
+        method: "POST",
+        headers: getAuthHeaders(authToken),
+        body: formData,
+      });
+      navigate("/profile");
+    } catch (uploadError) {
+      setError(uploadError.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  if (!currentUser) {
+    return (
+      <main className="page-shell">
+        <section className="content-panel">
+          <h1>Add song</h1>
+          <p>You need to login before uploading music.</p>
+          <Link className="text-link" to="/login">
+            Go to login
+          </Link>
+        </section>
+      </main>
+    );
+  }
+
+  if (songs.length >= songLimit) {
+    return (
+      <main className="page-shell">
+        <section className="content-panel upload-panel">
+          <p className="eyebrow">Upload limit reached</p>
+          <h1>Delete one song first</h1>
+          <p>
+            You can upload up to {songLimit} songs. Delete one from your list to add a new track.
+          </p>
+          {error ? <p className="form-error">{error}</p> : null}
+          <div className="song-list compact-list">
+            {songs.map((song) => (
+              <article className="song-item" key={song.id}>
+                <div className="song-details">
+                  <h3>{song.title}</h3>
+                  <p>{song.artistName}</p>
+                </div>
+                <button
+                  type="button"
+                  className="danger-button"
+                  onClick={() => handleDelete(song.id)}
+                >
+                  Delete
+                </button>
+              </article>
+            ))}
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  return (
+    <main className="page-shell">
+      <section className="content-panel upload-panel">
+        <p className="eyebrow">Share a track</p>
+        <h1>Add song</h1>
+        <form className="auth-form upload-form" onSubmit={handleSubmit}>
+          <label>
+            Song title
+            <input name="title" required />
+          </label>
+          <label>
+            Artist name
+            <input name="artistName" defaultValue={currentUser.displayName} required />
+          </label>
+          <label>
+            Hashtags
+            <input name="tags" placeholder="#indie #demo #bedroompop" />
+          </label>
+          <label>
+            Audio file
+            <input name="audioFile" type="file" accept=".mp3,.wav,.m4a,audio/*" required />
+          </label>
+          <label>
+            Cover photo
+            <input name="coverImage" type="file" accept=".jpg,.jpeg,.png,.webp,image/*" />
+          </label>
+          {error ? <p className="form-error">{error}</p> : null}
+          <button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Uploading..." : "Upload song"}
+          </button>
+        </form>
       </section>
     </main>
   );
@@ -246,6 +556,11 @@ export default function App() {
           )}
         </nav>
       </header>
+      {currentUser ? (
+        <Link className="floating-add-button" to="/songs/new" aria-label="Add song">
+          +
+        </Link>
+      ) : null}
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/about" element={<AboutPage />} />
@@ -257,7 +572,14 @@ export default function App() {
           path="/register"
           element={<AuthPage mode="register" onAuthSuccess={handleAuthSuccess} />}
         />
-        <Route path="/profile" element={<ProfilePage currentUser={currentUser} />} />
+        <Route
+          path="/profile"
+          element={<ProfilePage currentUser={currentUser} authToken={authToken} />}
+        />
+        <Route
+          path="/songs/new"
+          element={<SongUploadPage currentUser={currentUser} authToken={authToken} />}
+        />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </>

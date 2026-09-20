@@ -3,6 +3,7 @@ node_modules/
 dist/
 coverage/
 backend/data/
+backend/uploads*/
 .env
 .env.*
 !.env.example

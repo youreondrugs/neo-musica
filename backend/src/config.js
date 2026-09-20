@@ -8,6 +8,7 @@ const projectRoot = path.resolve(dirname, "../..");
 dotenv.config({ path: path.resolve(projectRoot, ".env") });
 
 const configuredDatabasePath = process.env.DATABASE_PATH || "backend/data/neo-musica.sqlite";
+const configuredUploadsPath = process.env.UPLOADS_PATH || "backend/uploads";
 
 export const config = {
   port: Number(process.env.BACKEND_PORT) || 4000,
@@ -15,4 +16,7 @@ export const config = {
   databasePath: path.isAbsolute(configuredDatabasePath)
     ? configuredDatabasePath
     : path.resolve(projectRoot, configuredDatabasePath),
+  uploadsPath: path.isAbsolute(configuredUploadsPath)
+    ? configuredUploadsPath
+    : path.resolve(projectRoot, configuredUploadsPath),
 };
