@@ -35,6 +35,29 @@ function getAssetUrl(path) {
   return path ? `${API_BASE_URL}${path}` : "";
 }
 
+function CoverMarquee({ covers }) {
+  const visibleCovers = covers.filter(Boolean);
+
+  if (visibleCovers.length === 0) {
+    return null;
+  }
+
+  const loopCovers = Array.from(
+    { length: 16 },
+    (_, index) => visibleCovers[index % visibleCovers.length],
+  );
+
+  return (
+    <div className="cover-marquee" aria-hidden="true">
+      <div className="cover-marquee-track">
+        {loopCovers.map((coverUrl, index) => (
+          <img src={getAssetUrl(coverUrl)} alt="" key={`${coverUrl}-${index}`} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function PublicSongList({ songs }) {
   if (songs.length === 0) {
     return <p className="empty-state">No songs uploaded yet.</p>;
@@ -61,8 +84,7 @@ function PublicSongList({ songs }) {
   );
 }
 
-function RandomSongPlayer() {
-  const [song, setSong] = useState(null);
+function RandomSongPlayer({ song, setSong }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -126,6 +148,7 @@ function HomePage({ authToken }) {
   const [artists, setArtists] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [error, setError] = useState("");
+  const [randomSong, setRandomSong] = useState(null);
 
   async function handleSearch(event) {
     event.preventDefault();
@@ -146,7 +169,10 @@ function HomePage({ authToken }) {
   }
 
   return (
-    <main className="page-shell">
+    <main
+      className={`page-shell home-page-shell${randomSong?.coverUrl ? " has-cover-marquee" : ""}`}
+    >
+      <CoverMarquee covers={randomSong?.coverUrl ? [randomSong.coverUrl] : []} />
       <section className="discovery-panel">
         <form className="artist-search-form" onSubmit={handleSearch}>
           <label htmlFor="artist-search">Search artists</label>
@@ -181,7 +207,7 @@ function HomePage({ authToken }) {
           </div>
         ) : null}
       </section>
-      <RandomSongPlayer />
+      <RandomSongPlayer song={randomSong} setSong={setRandomSong} />
     </main>
   );
 }
@@ -339,7 +365,10 @@ function ProfilePage({ currentUser, authToken }) {
   }
 
   return (
-    <main className="page-shell">
+    <main
+      className={`page-shell profile-page-shell${songs.some((song) => song.coverUrl) ? " has-cover-marquee" : ""}`}
+    >
+      <CoverMarquee covers={songs.map((song) => song.coverUrl)} />
       <section className="content-panel profile-panel">
         <h1>{currentUser.displayName}</h1>
         <p>{currentUser.email}</p>

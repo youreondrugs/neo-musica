@@ -104,9 +104,70 @@ button:hover {
 }
 
 .page-shell {
+  position: relative;
   width: min(1120px, calc(100% - 32px));
   margin: 0 auto;
   padding: 80px 0;
+}
+
+.has-cover-marquee {
+  min-height: calc(100vh - 84px);
+}
+
+.cover-marquee {
+  position: fixed;
+  inset: 92px 0 auto 0;
+  z-index: -1;
+  height: 148px;
+  overflow: hidden;
+  opacity: 0.22;
+  pointer-events: none;
+}
+
+.cover-marquee::before,
+.cover-marquee::after {
+  position: absolute;
+  top: 0;
+  z-index: 1;
+  width: 120px;
+  height: 100%;
+  content: "";
+}
+
+.cover-marquee::before {
+  left: 0;
+  background: linear-gradient(90deg, #f5f7fb, rgba(245, 247, 251, 0));
+}
+
+.cover-marquee::after {
+  right: 0;
+  background: linear-gradient(270deg, #f5f7fb, rgba(245, 247, 251, 0));
+}
+
+.cover-marquee-track {
+  display: flex;
+  gap: 18px;
+  width: max-content;
+  animation: cover-marquee-slide 26s linear infinite;
+}
+
+.cover-marquee-track img {
+  width: 132px;
+  height: 132px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+}
+
+@keyframes cover-marquee-slide {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
 }
 
 .eyebrow {
@@ -514,6 +575,20 @@ p {
 
   .page-shell {
     padding: 48px 0;
+  }
+
+  .cover-marquee {
+    inset: 148px 0 auto 0;
+    height: 112px;
+  }
+
+  .cover-marquee-track {
+    gap: 12px;
+  }
+
+  .cover-marquee-track img {
+    width: 96px;
+    height: 96px;
   }
 
   .library-header,
