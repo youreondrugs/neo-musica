@@ -112,7 +112,7 @@ describe("song endpoints", () => {
       .set("Authorization", `Bearer ${token}`)
       .field("title", "First Signal")
       .field("artistName", user.displayName)
-      .field("tags", "#indie, discovery")
+      .field("description", "A first song for discovery.")
       .attach("audioFile", Buffer.from("fake mp3 data"), {
         filename: "first-signal.mp3",
         contentType: "audio/mpeg",
@@ -126,7 +126,7 @@ describe("song endpoints", () => {
     expect(uploadResponse.body.song).toMatchObject({
       title: "First Signal",
       artistName: user.displayName,
-      tags: ["#indie", "#discovery"],
+      description: "A first song for discovery.",
     });
 
     const listResponse = await request(app)
@@ -144,14 +144,14 @@ describe("song endpoints", () => {
       .send({
         title: "First Signal Updated",
         artistName: "New Artist Name",
-        tags: "alt pop",
+        description: "Updated description.",
       });
 
     expect(updateResponse.status).toBe(200);
     expect(updateResponse.body.song).toMatchObject({
       title: "First Signal Updated",
       artistName: "New Artist Name",
-      tags: ["#alt", "#pop"],
+      description: "Updated description.",
     });
 
     const deleteResponse = await request(app)
@@ -214,7 +214,7 @@ describe("discovery endpoints", () => {
       .set("Authorization", `Bearer ${token}`)
       .field("title", "Hidden Frequency")
       .field("artistName", user.displayName)
-      .field("tags", "#ambient")
+      .field("description", "A quiet discovery track.")
       .attach("audioFile", Buffer.from("fake discovery mp3"), {
         filename: "hidden-frequency.mp3",
         contentType: "audio/mpeg",

@@ -39,7 +39,7 @@ function toSong(row) {
     userId: row.user_id,
     title: row.title,
     artistName: row.artist_name,
-    tags: row.tags ? JSON.parse(row.tags) : [],
+    description: row.description || "",
     audioFilePath: row.audio_file_path,
     coverFilePath: row.cover_file_path,
     audioOriginalName: row.audio_original_name,
@@ -124,6 +124,12 @@ function getRows(database, sql, params = {}) {
   }
 }
 
+function hasColumn(database, tableName, columnName) {
+  return getRows(database, `PRAGMA table_info(${tableName})`).some(
+    (column) => column.name === columnName,
+  );
+}
+
 export async function createDatabase({ databasePath } = {}) {
   const SQL = await getSqlModule();
   const database =
@@ -168,7 +174,7 @@ export async function createDatabase({ databasePath } = {}) {
       user_id TEXT NOT NULL,
       title TEXT NOT NULL,
       artist_name TEXT NOT NULL,
-      tags TEXT NOT NULL DEFAULT '[]',
+      description TEXT NOT NULL DEFAULT '',
       audio_file_path TEXT NOT NULL,
       cover_file_path TEXT,
       audio_original_name TEXT NOT NULL,
@@ -192,6 +198,11 @@ export async function createDatabase({ databasePath } = {}) {
     CREATE INDEX IF NOT EXISTS follows_followed_user_id_index
       ON follows(followed_user_id);
   `);
+
+  if (!hasColumn(database, "songs", "description")) {
+    database.exec("ALTER TABLE songs ADD COLUMN description TEXT NOT NULL DEFAULT '';");
+  }
+
   persist();
 
   return {
@@ -301,7 +312,7 @@ export async function createDatabase({ databasePath } = {}) {
       return getRows(
         database,
         `
-          SELECT id, user_id, title, artist_name, tags, audio_file_path, cover_file_path,
+          SELECT id, user_id, title, artist_name, description, audio_file_path, cover_file_path,
             audio_original_name, cover_original_name, created_at, updated_at
           FROM songs
           WHERE user_id = $userId
@@ -315,7 +326,7 @@ export async function createDatabase({ databasePath } = {}) {
       return getRows(
         database,
         `
-          SELECT id, user_id, title, artist_name, tags, audio_file_path, cover_file_path,
+          SELECT id, user_id, title, artist_name, description, audio_file_path, cover_file_path,
             audio_original_name, cover_original_name, created_at, updated_at
           FROM songs
           WHERE user_id = $userId
@@ -415,7 +426,7 @@ export async function createDatabase({ databasePath } = {}) {
         getFirstRow(
           database,
           `
-            SELECT songs.id, songs.user_id, songs.title, songs.artist_name, songs.tags,
+            SELECT songs.id, songs.user_id, songs.title, songs.artist_name, songs.description,
               songs.audio_file_path, songs.cover_file_path, songs.audio_original_name,
               songs.cover_original_name, songs.created_at, songs.updated_at,
               users.id AS artist_id, users.display_name AS artist_display_name
@@ -433,7 +444,7 @@ export async function createDatabase({ databasePath } = {}) {
         getFirstRow(
           database,
           `
-            SELECT id, user_id, title, artist_name, tags, audio_file_path, cover_file_path,
+            SELECT id, user_id, title, artist_name, description, audio_file_path, cover_file_path,
               audio_original_name, cover_original_name, created_at, updated_at
             FROM songs
             WHERE id = $id AND user_id = $userId
@@ -448,7 +459,7 @@ export async function createDatabase({ databasePath } = {}) {
       userId,
       title,
       artistName,
-      tags,
+      description,
       audioFilePath,
       coverFilePath,
       audioOriginalName,
@@ -458,11 +469,11 @@ export async function createDatabase({ databasePath } = {}) {
         database,
         `
           INSERT INTO songs (
-            id, user_id, title, artist_name, tags, audio_file_path, cover_file_path,
+            id, user_id, title, artist_name, description, audio_file_path, cover_file_path,
             audio_original_name, cover_original_name
           )
           VALUES (
-            $id, $userId, $title, $artistName, $tags, $audioFilePath, $coverFilePath,
+            $id, $userId, $title, $artistName, $description, $audioFilePath, $coverFilePath,
             $audioOriginalName, $coverOriginalName
           )
         `,
@@ -471,7 +482,7 @@ export async function createDatabase({ databasePath } = {}) {
           $userId: userId,
           $title: title,
           $artistName: artistName,
-          $tags: JSON.stringify(tags),
+          $description: description,
           $audioFilePath: audioFilePath,
           $coverFilePath: coverFilePath,
           $audioOriginalName: audioOriginalName,
@@ -483,14 +494,14 @@ export async function createDatabase({ databasePath } = {}) {
       return this.findSongByIdAndUserId(id, userId);
     },
 
-    updateSong({ id, userId, title, artistName, tags }) {
+    updateSong({ id, userId, title, artistName, description }) {
       run(
         database,
         `
           UPDATE songs
           SET title = $title,
             artist_name = $artistName,
-            tags = $tags,
+            description = $description,
             updated_at = CURRENT_TIMESTAMP
           WHERE id = $id AND user_id = $userId
         `,
@@ -499,7 +510,7 @@ export async function createDatabase({ databasePath } = {}) {
           $userId: userId,
           $title: title,
           $artistName: artistName,
-          $tags: JSON.stringify(tags),
+          $description: description,
         },
       );
       persist();

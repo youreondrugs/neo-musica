@@ -62,7 +62,8 @@ nav a:hover {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
 }
 
@@ -278,13 +279,18 @@ p {
   font-weight: 750;
 }
 
-.auth-form input {
+.auth-form input,
+.auth-form textarea {
   width: 100%;
   border: 1px solid #c9d6df;
   border-radius: 6px;
   background: #ffffff;
   color: #1f2933;
   padding: 12px 14px;
+}
+
+.auth-form textarea {
+  resize: vertical;
 }
 
 .auth-form input[type="file"] {
@@ -424,19 +430,9 @@ p {
   max-width: 420px;
 }
 
-.tag-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.tag-list span {
-  border-radius: 999px;
-  background: #eef2f6;
-  color: #3f4e4f;
-  padding: 4px 9px;
-  font-size: 0.9rem;
-  font-weight: 750;
+.song-description {
+  color: #52616b;
+  font-size: 1rem;
 }
 
 .song-actions {
@@ -465,13 +461,18 @@ p {
   gap: 10px;
 }
 
-.song-edit-form input {
+.song-edit-form input,
+.song-edit-form textarea {
   width: 100%;
   border: 1px solid #c9d6df;
   border-radius: 6px;
   background: #ffffff;
   color: #1f2933;
   padding: 10px 12px;
+}
+
+.song-edit-form textarea {
+  resize: vertical;
 }
 
 .upload-panel {

@@ -52,15 +52,6 @@ function createHttpError(message, status = 400) {
   return error;
 }
 
-function parseTags(value) {
-  return String(value || "")
-    .split(/[,\s]+/)
-    .map((tag) => tag.trim().replace(/^#/, ""))
-    .filter(Boolean)
-    .slice(0, 8)
-    .map((tag) => `#${tag.toLowerCase()}`);
-}
-
 function isAcceptedFile(file, acceptedExtensions, acceptedMimePrefix) {
   const extension = path.extname(file.originalname).toLowerCase();
 
@@ -73,7 +64,7 @@ function serializeSong(song) {
     userId: song.userId,
     title: song.title,
     artistName: song.artistName,
-    tags: song.tags,
+    description: song.description,
     audioUrl: `/uploads/${song.audioFilePath}`,
     coverUrl: song.coverFilePath ? `/uploads/${song.coverFilePath}` : null,
     audioOriginalName: song.audioOriginalName,
@@ -394,7 +385,7 @@ export function createApp({ database, uploadsPath }) {
         const user = request.currentUser;
         const title = String(request.body.title || "").trim();
         const artistName = String(request.body.artistName || user.displayName).trim();
-        const tags = parseTags(request.body.tags);
+        const description = String(request.body.description || "").trim();
         const audioFile = request.files?.audioFile?.[0];
         const coverImage = request.files?.coverImage?.[0];
 
@@ -429,7 +420,7 @@ export function createApp({ database, uploadsPath }) {
           userId: user.id,
           title,
           artistName,
-          tags,
+          description,
           audioFilePath: audioFile.filename,
           coverFilePath: coverImage?.filename || null,
           audioOriginalName: audioFile.originalname,
@@ -468,7 +459,7 @@ export function createApp({ database, uploadsPath }) {
         userId: user.id,
         title,
         artistName,
-        tags: parseTags(request.body.tags),
+        description: String(request.body.description || "").trim(),
       });
 
       response.status(200).json({ song: serializeSong(song) });

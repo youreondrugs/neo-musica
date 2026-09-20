@@ -52,13 +52,7 @@ function PublicSongList({ songs }) {
           <div className="song-details">
             <h3>{song.title}</h3>
             <p>{song.artistName}</p>
-            {song.tags.length > 0 ? (
-              <div className="tag-list">
-                {song.tags.map((tag) => (
-                  <span key={tag}>{tag}</span>
-                ))}
-              </div>
-            ) : null}
+            {song.description ? <p className="song-description">{song.description}</p> : null}
             <audio controls src={getAssetUrl(song.audioUrl)} />
           </div>
         </article>
@@ -116,13 +110,7 @@ function RandomSongPlayer() {
                 {song.artistName}
               </Link>
             </p>
-            {song.tags.length > 0 ? (
-              <div className="tag-list">
-                {song.tags.map((tag) => (
-                  <span key={tag}>{tag}</span>
-                ))}
-              </div>
-            ) : null}
+            {song.description ? <p className="song-description">{song.description}</p> : null}
             <audio controls src={getAssetUrl(song.audioUrl)} />
           </div>
         </article>
@@ -297,7 +285,7 @@ function ProfilePage({ currentUser, authToken }) {
   const [songLimit, setSongLimit] = useState(10);
   const [error, setError] = useState("");
   const [editingSongId, setEditingSongId] = useState(null);
-  const [editForm, setEditForm] = useState({ title: "", artistName: "", tags: "" });
+  const [editForm, setEditForm] = useState({ title: "", artistName: "", description: "" });
 
   async function loadSongs() {
     if (!authToken) {
@@ -326,7 +314,7 @@ function ProfilePage({ currentUser, authToken }) {
     setEditForm({
       title: song.title,
       artistName: song.artistName,
-      tags: song.tags.join(" "),
+      description: song.description,
     });
   }
 
@@ -430,11 +418,15 @@ function ProfilePage({ currentUser, authToken }) {
                         }
                         required
                       />
-                      <input
-                        aria-label="Tags"
-                        value={editForm.tags}
+                      <textarea
+                        aria-label="Description"
+                        rows="3"
+                        value={editForm.description}
                         onChange={(event) =>
-                          setEditForm((current) => ({ ...current, tags: event.target.value }))
+                          setEditForm((current) => ({
+                            ...current,
+                            description: event.target.value,
+                          }))
                         }
                       />
                       <div className="song-actions">
@@ -452,12 +444,8 @@ function ProfilePage({ currentUser, authToken }) {
                     <>
                       <h3>{song.title}</h3>
                       <p>{song.artistName}</p>
-                      {song.tags.length > 0 ? (
-                        <div className="tag-list">
-                          {song.tags.map((tag) => (
-                            <span key={tag}>{tag}</span>
-                          ))}
-                        </div>
+                      {song.description ? (
+                        <p className="song-description">{song.description}</p>
                       ) : null}
                       <audio controls src={getAssetUrl(song.audioUrl)} />
                       <div className="song-actions">
@@ -605,8 +593,8 @@ function SongUploadPage({ currentUser, authToken }) {
             <input name="artistName" defaultValue={currentUser.displayName} required />
           </label>
           <label>
-            Hashtags
-            <input name="tags" placeholder="#indie #demo #bedroompop" />
+            Description
+            <textarea name="description" rows="4" placeholder="A few words about the track" />
           </label>
           <label>
             Audio file
