@@ -2,7 +2,7 @@
 
 Neo Musica is the foundation for a music discovery website where unknown artists can upload songs and listeners can discover random tracks from the community.
 
-This repository currently contains boilerplate only. It intentionally does not include authentication, uploads, random playback, likes, points, tiers, profile customization, or database models yet.
+This repository currently contains the first small product slice: in-memory registration, login, logout, and a simple profile view. It intentionally does not include uploads, random playback, likes, points, tiers, profile customization, or database models yet.
 
 ## Project Structure
 
@@ -49,3 +49,12 @@ GET /api/health
 ```
 
 Returns a simple health-check response from the backend.
+
+```http
+POST /api/auth/register
+POST /api/auth/login
+GET /api/auth/me
+POST /api/auth/logout
+```
+
+These auth endpoints use in-memory storage for now. Accounts disappear when the backend restarts.

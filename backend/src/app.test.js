@@ -13,3 +13,58 @@ describe("health endpoint", () => {
     });
   });
 });
+
+describe("auth endpoints", () => {
+  it("registers, reads the current user, and logs out", async () => {
+    const app = createApp();
+    const registerResponse = await request(app).post("/api/auth/register").send({
+      displayName: "Frankleen",
+      email: "frankleen@example.com",
+      password: "password123",
+    });
+
+    expect(registerResponse.status).toBe(201);
+    expect(registerResponse.body.token).toBeTruthy();
+    expect(registerResponse.body.user).toMatchObject({
+      displayName: "Frankleen",
+      email: "frankleen@example.com",
+    });
+
+    const token = registerResponse.body.token;
+    const meResponse = await request(app).get("/api/auth/me").set("Authorization", `Bearer ${token}`);
+
+    expect(meResponse.status).toBe(200);
+    expect(meResponse.body.user.email).toBe("frankleen@example.com");
+
+    const logoutResponse = await request(app)
+      .post("/api/auth/logout")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(logoutResponse.status).toBe(204);
+
+    const signedOutResponse = await request(app)
+      .get("/api/auth/me")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(signedOutResponse.status).toBe(401);
+  });
+
+  it("logs in an existing user", async () => {
+    const app = createApp();
+
+    await request(app).post("/api/auth/register").send({
+      displayName: "Creator",
+      email: "creator@example.com",
+      password: "password123",
+    });
+
+    const loginResponse = await request(app).post("/api/auth/login").send({
+      email: "creator@example.com",
+      password: "password123",
+    });
+
+    expect(loginResponse.status).toBe(200);
+    expect(loginResponse.body.token).toBeTruthy();
+    expect(loginResponse.body.user.displayName).toBe("Creator");
+  });
+});

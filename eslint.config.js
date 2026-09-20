@@ -27,6 +27,7 @@ export default [
       },
     },
     rules: {
+      "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
       "react/jsx-uses-vars": "error",
       "react/jsx-uses-react": "off",
     },
