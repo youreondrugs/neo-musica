@@ -124,18 +124,16 @@ button:hover {
 }
 
 .cover-marquee-track {
-  display: grid;
-  grid-auto-flow: column;
-  grid-template-rows: repeat(6, 1fr);
+  display: flex;
   gap: 0;
-  height: 100vh;
+  height: 100dvh;
   width: max-content;
-  animation: cover-marquee-slide 38s linear infinite;
+  animation: cover-marquee-slide 110s linear infinite;
 }
 
 .cover-marquee-track img {
-  width: calc(100vh / 6);
-  height: calc(100vh / 6);
+  width: 100dvw;
+  height: 100dvh;
   flex: 0 0 auto;
   border-radius: 0;
   object-fit: cover;
@@ -563,13 +561,12 @@ p {
   }
 
   .cover-marquee-track {
-    grid-template-rows: repeat(8, 1fr);
-    height: 100vh;
+    height: 100dvh;
   }
 
   .cover-marquee-track img {
-    width: calc(100vh / 8);
-    height: calc(100vh / 8);
+    width: 100dvw;
+    height: 100dvh;
   }
 
   .library-header,

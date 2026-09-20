@@ -43,7 +43,7 @@ function CoverMarquee({ covers }) {
   }
 
   const loopCovers = Array.from(
-    { length: 16 },
+    { length: 12 },
     (_, index) => visibleCovers[index % visibleCovers.length],
   );
 
