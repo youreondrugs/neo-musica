@@ -1,9 +1,10 @@
-import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
 import cors from "cors";
 import express from "express";
 
 const PASSWORD_KEY_LENGTH = 64;
 const MIN_PASSWORD_LENGTH = 8;
+const SESSION_DURATION_DAYS = 7;
 
 function normalizeEmail(email) {
   return String(email || "")
@@ -16,6 +17,10 @@ function hashPassword(password) {
   const hash = scryptSync(password, salt, PASSWORD_KEY_LENGTH).toString("hex");
 
   return `${salt}:${hash}`;
+}
+
+function hashSessionToken(token) {
+  return createHash("sha256").update(token).digest("hex");
 }
 
 function verifyPassword(password, storedPassword) {
@@ -40,10 +45,8 @@ function createAuthError(message, status = 400) {
   return error;
 }
 
-export function createApp() {
+export function createApp({ database }) {
   const app = express();
-  const usersByEmail = new Map();
-  const sessionsByToken = new Map();
 
   app.use(cors());
   app.use(express.json());
@@ -57,7 +60,16 @@ export function createApp() {
 
   function createSession(userId) {
     const token = randomBytes(32).toString("hex");
-    sessionsByToken.set(token, userId);
+    const expiresAt = new Date(
+      Date.now() + SESSION_DURATION_DAYS * 24 * 60 * 60 * 1000,
+    ).toISOString();
+
+    database.createSession({
+      id: randomUUID(),
+      userId,
+      tokenHash: hashSessionToken(token),
+      expiresAt,
+    });
 
     return token;
   }
@@ -70,13 +82,7 @@ export function createApp() {
       return null;
     }
 
-    const userId = sessionsByToken.get(token);
-
-    if (!userId) {
-      return null;
-    }
-
-    return [...usersByEmail.values()].find((user) => user.id === userId) || null;
+    return database.findUserBySessionTokenHash(hashSessionToken(token), new Date().toISOString());
   }
 
   app.post("/api/auth/register", (request, response, next) => {
@@ -97,18 +103,16 @@ export function createApp() {
         throw createAuthError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
       }
 
-      if (usersByEmail.has(email)) {
+      if (database.findUserByEmail(email)) {
         throw createAuthError("An account already exists for that email.", 409);
       }
 
-      const user = {
+      const user = database.createUser({
         id: randomUUID(),
         displayName,
         email,
         passwordHash: hashPassword(password),
-      };
-
-      usersByEmail.set(email, user);
+      });
 
       response.status(201).json({
         token: createSession(user.id),
@@ -123,7 +127,7 @@ export function createApp() {
     try {
       const email = normalizeEmail(request.body.email);
       const password = String(request.body.password || "");
-      const user = usersByEmail.get(email);
+      const user = database.findUserByEmail(email);
 
       if (!user || !verifyPassword(password, user.passwordHash)) {
         throw createAuthError("Email or password is incorrect.", 401);
@@ -153,7 +157,7 @@ export function createApp() {
     const [, token] = authorization.split(" ");
 
     if (token) {
-      sessionsByToken.delete(token);
+      database.deleteSessionByTokenHash(hashSessionToken(token));
     }
 
     response.status(204).send();

@@ -249,7 +249,10 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/about" element={<AboutPage />} />
-        <Route path="/login" element={<AuthPage mode="login" onAuthSuccess={handleAuthSuccess} />} />
+        <Route
+          path="/login"
+          element={<AuthPage mode="login" onAuthSuccess={handleAuthSuccess} />}
+        />
         <Route
           path="/register"
           element={<AuthPage mode="register" onAuthSuccess={handleAuthSuccess} />}

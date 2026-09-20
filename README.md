@@ -2,7 +2,7 @@
 
 Neo Musica is the foundation for a music discovery website where unknown artists can upload songs and listeners can discover random tracks from the community.
 
-This repository currently contains the first small product slice: in-memory registration, login, logout, and a simple profile view. It intentionally does not include uploads, random playback, likes, points, tiers, profile customization, or database models yet.
+This repository currently contains the first small product slices: registration, login, logout, a simple profile view, and SQLite-backed user/session storage. It intentionally does not include uploads, random playback, likes, points, tiers, or profile customization yet.
 
 ## Project Structure
 
@@ -10,6 +10,7 @@ This repository currently contains the first small product slice: in-memory regi
 neo-musica/
   backend/      Express API foundation
   frontend/     Vite + React app foundation
+  backend/data/ Local SQLite database files, ignored by Git
   .env.example  Environment variable template
 ```
 
@@ -29,6 +30,8 @@ pnpm dev
 The frontend runs on `http://localhost:5173`.
 
 The backend runs on `http://localhost:4000`.
+
+The local SQLite database is created at `backend/data/neo-musica.sqlite` by default.
 
 ## Useful Commands
 
@@ -57,4 +60,4 @@ GET /api/auth/me
 POST /api/auth/logout
 ```
 
-These auth endpoints use in-memory storage for now. Accounts disappear when the backend restarts.
+These auth endpoints use local SQLite storage. Accounts and sessions persist across backend restarts on your machine.

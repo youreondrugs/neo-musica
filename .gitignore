@@ -1,6 +1,8 @@
 node_modules/
+.pnpm-store/
 dist/
 coverage/
+backend/data/
 .env
 .env.*
 !.env.example

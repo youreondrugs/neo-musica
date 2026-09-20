@@ -1,22 +1,26 @@
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { createApp } from "./app.js";
+import { createDatabase } from "./database.js";
 
 describe("health endpoint", () => {
   it("returns API status", async () => {
-    const response = await request(createApp()).get("/api/health");
+    const database = await createDatabase();
+    const response = await request(createApp({ database })).get("/api/health");
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
       status: "ok",
       service: "neo-musica-api",
     });
+    database.close();
   });
 });
 
 describe("auth endpoints", () => {
   it("registers, reads the current user, and logs out", async () => {
-    const app = createApp();
+    const database = await createDatabase();
+    const app = createApp({ database });
     const registerResponse = await request(app).post("/api/auth/register").send({
       displayName: "Frankleen",
       email: "frankleen@example.com",
@@ -31,7 +35,9 @@ describe("auth endpoints", () => {
     });
 
     const token = registerResponse.body.token;
-    const meResponse = await request(app).get("/api/auth/me").set("Authorization", `Bearer ${token}`);
+    const meResponse = await request(app)
+      .get("/api/auth/me")
+      .set("Authorization", `Bearer ${token}`);
 
     expect(meResponse.status).toBe(200);
     expect(meResponse.body.user.email).toBe("frankleen@example.com");
@@ -47,10 +53,12 @@ describe("auth endpoints", () => {
       .set("Authorization", `Bearer ${token}`);
 
     expect(signedOutResponse.status).toBe(401);
+    database.close();
   });
 
   it("logs in an existing user", async () => {
-    const app = createApp();
+    const database = await createDatabase();
+    const app = createApp({ database });
 
     await request(app).post("/api/auth/register").send({
       displayName: "Creator",
@@ -66,5 +74,6 @@ describe("auth endpoints", () => {
     expect(loginResponse.status).toBe(200);
     expect(loginResponse.body.token).toBeTruthy();
     expect(loginResponse.body.user.displayName).toBe("Creator");
+    database.close();
   });
 });
