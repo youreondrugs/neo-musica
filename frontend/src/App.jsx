@@ -147,14 +147,6 @@ function HomePage({ authToken }) {
 
   return (
     <main className="page-shell">
-      <section className="hero">
-        <p className="eyebrow">Music discovery for emerging artists</p>
-        <h1>Neo Musica</h1>
-        <p>
-          A future home for random music discovery, creator profiles, listener rewards, and
-          recognition for unknown artists who are still waiting to be found.
-        </p>
-      </section>
       <section className="discovery-panel">
         <form className="artist-search-form" onSubmit={handleSearch}>
           <label htmlFor="artist-search">Search artists</label>
@@ -190,20 +182,6 @@ function HomePage({ authToken }) {
         ) : null}
       </section>
       <RandomSongPlayer />
-    </main>
-  );
-}
-
-function AboutPage() {
-  return (
-    <main className="page-shell">
-      <section className="content-panel">
-        <h1>About</h1>
-        <p>
-          This project is currently a clean foundation. Product features will be added after the
-          core app structure, tooling, and development workflow are stable.
-        </p>
-      </section>
     </main>
   );
 }
@@ -363,7 +341,6 @@ function ProfilePage({ currentUser, authToken }) {
   return (
     <main className="page-shell">
       <section className="content-panel profile-panel">
-        <p className="eyebrow">Signed in</p>
         <h1>{currentUser.displayName}</h1>
         <p>{currentUser.email}</p>
         <div className="profile-preview">
@@ -789,7 +766,6 @@ export default function App() {
         </Link>
         <nav aria-label="Primary navigation">
           <Link to="/">Home</Link>
-          <Link to="/about">About</Link>
           {currentUser ? <Link to="/profile">Profile</Link> : null}
           {currentUser ? (
             <button className="nav-button" type="button" onClick={handleLogout}>
@@ -810,7 +786,6 @@ export default function App() {
       ) : null}
       <Routes>
         <Route path="/" element={<HomePage authToken={authToken} />} />
-        <Route path="/about" element={<AboutPage />} />
         <Route
           path="/login"
           element={<AuthPage mode="login" onAuthSuccess={handleAuthSuccess} />}

@@ -109,12 +109,6 @@ button:hover {
   padding: 80px 0;
 }
 
-.hero {
-  display: grid;
-  gap: 18px;
-  max-width: 720px;
-}
-
 .eyebrow {
   margin: 0;
   color: #006d77;

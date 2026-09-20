@@ -27,9 +27,8 @@ describe("App", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("heading", { name: "Neo Musica" })).toBeInTheDocument();
-    expect(screen.getByText(/unknown artists/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/search artists/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /press play/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /find a song|loading/i })).toBeInTheDocument();
   });
 
