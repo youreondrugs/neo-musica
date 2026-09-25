@@ -203,14 +203,13 @@ describe("song endpoints", () => {
       .set("Authorization", `Bearer ${token}`)
       .send({
         title: "First Signal Updated",
-        artistName: "New Artist Name",
         description: "Updated description.",
       });
 
     expect(updateResponse.status).toBe(200);
     expect(updateResponse.body.song).toMatchObject({
       title: "First Signal Updated",
-      artistName: "New Artist Name",
+      artistName: user.displayName,
       description: "Updated description.",
     });
 

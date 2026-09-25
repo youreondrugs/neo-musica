@@ -382,6 +382,19 @@ export async function createDatabase({ databasePath } = {}) {
         `,
         params,
       );
+
+      if (displayName) {
+        run(
+          database,
+          `
+            UPDATE songs
+            SET artist_name = $displayName,
+              updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = $id
+          `,
+          params,
+        );
+      }
       persist();
 
       return this.findUserById(id);
@@ -722,7 +735,19 @@ export async function createDatabase({ databasePath } = {}) {
       return this.findSongByIdAndUserId(id, userId);
     },
 
-    updateSong({ id, userId, title, artistName, description }) {
+    updateSong({
+      id,
+      userId,
+      title,
+      artistName,
+      description,
+      coverFilePath,
+      coverOriginalName,
+      backgroundVideoFilePath,
+      backgroundVideoOriginalName,
+      slideshowImagePaths,
+      slideshowImageOriginalNames,
+    }) {
       run(
         database,
         `
@@ -730,6 +755,12 @@ export async function createDatabase({ databasePath } = {}) {
           SET title = $title,
             artist_name = $artistName,
             description = $description,
+            cover_file_path = $coverFilePath,
+            cover_original_name = $coverOriginalName,
+            background_video_file_path = $backgroundVideoFilePath,
+            background_video_original_name = $backgroundVideoOriginalName,
+            slideshow_image_paths = $slideshowImagePaths,
+            slideshow_image_original_names = $slideshowImageOriginalNames,
             updated_at = CURRENT_TIMESTAMP
           WHERE id = $id AND user_id = $userId
         `,
@@ -739,6 +770,12 @@ export async function createDatabase({ databasePath } = {}) {
           $title: title,
           $artistName: artistName,
           $description: description,
+          $coverFilePath: coverFilePath,
+          $coverOriginalName: coverOriginalName,
+          $backgroundVideoFilePath: backgroundVideoFilePath,
+          $backgroundVideoOriginalName: backgroundVideoOriginalName,
+          $slideshowImagePaths: JSON.stringify(slideshowImagePaths || []),
+          $slideshowImageOriginalNames: JSON.stringify(slideshowImageOriginalNames || []),
         },
       );
       persist();

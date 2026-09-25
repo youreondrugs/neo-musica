@@ -13,7 +13,59 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000
 const AUTH_TOKEN_STORAGE_KEY = "neo-musica-token";
 const THEME_STORAGE_KEY = "neo-musica-theme";
 const LANGUAGE_STORAGE_KEY = "neo-musica-language";
-const BRAND_VARIANT_COUNT = 10;
+const BRAND_STYLES = [
+  ["Georgia", "#ff1744"],
+  ['"Courier New"', "#00e5ff"],
+  ["Impact", "#ffea00"],
+  ['"Arial Black"', "#76ff03"],
+  ["Palatino", "#f500ff"],
+  ['"Trebuchet MS"', "#ff6d00"],
+  ["Verdana", "#2979ff"],
+  ["Garamond", "#00c853"],
+  ["Didot", "#d500f9"],
+  ["Copperplate", "#ff3d00"],
+  ["Futura", "#00bfa5"],
+  ["Baskerville", "#c51162"],
+  ["Optima", "#304ffe"],
+  ["Menlo", "#aeea00"],
+  ["Monaco", "#ff4081"],
+  ["Papyrus", "#00b8d4"],
+  ["Chalkduster", "#ffab00"],
+  ["Avenir", "#651fff"],
+  ["Helvetica", "#00e676"],
+  ["Arial", "#ff5252"],
+  ["Times", "#18ffff"],
+  ["Cochin", "#ffd600"],
+  ["Hoefler Text", "#64dd17"],
+  ["Rockwell", "#e040fb"],
+  ["Gill Sans", "#ff9100"],
+  ["Charter", "#448aff"],
+  ["Skia", "#1de9b6"],
+  ["Trattatello", "#ff1744"],
+  ["Noteworthy", "#c6ff00"],
+  ["Snell Roundhand", "#7c4dff"],
+  ["DIN Condensed", "#00e5ff"],
+  ["Marker Felt", "#ff6e40"],
+  ["Courier", "#69f0ae"],
+  ["Geneva", "#ff4081"],
+  ["Lucida Grande", "#40c4ff"],
+  ["American Typewriter", "#ffff00"],
+  ["Bradley Hand", "#b2ff59"],
+  ["Brush Script MT", "#ea80fc"],
+  ["Comic Sans MS", "#ffab40"],
+  ["Andale Mono", "#82b1ff"],
+  ["Bookman", "#00e676"],
+  ["Candara", "#ff5252"],
+  ["Century Gothic", "#84ffff"],
+  ["Franklin Gothic Medium", "#ffff8d"],
+  ["Herculanum", "#ccff90"],
+  ["Lucida Console", "#b388ff"],
+  ["Phosphate", "#ff8a80"],
+  ["PT Sans", "#80d8ff"],
+  ["Tahoma", "#f4ff81"],
+  ["Zapfino", "#ff80ab"],
+];
+const BRAND_VARIANT_COUNT = BRAND_STYLES.length;
 const THEMES = [
   { id: "sea", label: "Sea glass", swatch: "#006d77" },
   { id: "dark-red", label: "Dark red", swatch: "#8f1d2c" },
@@ -25,6 +77,10 @@ const THEMES = [
   { id: "electric", label: "Electric blue", swatch: "#2563eb" },
   { id: "acid", label: "Acid lime", swatch: "#b6ff00" },
   { id: "bubblegum", label: "Bubblegum", swatch: "#ff4fb3" },
+  { id: "frost", label: "Frost", swatch: "#dbeafe" },
+  { id: "rosewater", label: "Rosewater", swatch: "#ffe4ec" },
+  { id: "paper", label: "Paper", swatch: "#f8f4df" },
+  { id: "dayglow", label: "Dayglow", swatch: "#e9ff70" },
 ];
 const LANGUAGES = [
   { id: "en", label: "US" },
@@ -33,9 +89,10 @@ const LANGUAGES = [
 const TRANSLATIONS = {
   en: {
     artist: "Artist",
+    artistName: "Artist name",
     artists: "Artists",
     contact: "Contact",
-    contactEmail: "For now: hello@neo-musica.local",
+    contactEmail: "realmartynassutkus@gmail.com",
     currentPassword: "Current password",
     displayName: "Display name",
     editProfile: "Edit profile",
@@ -50,10 +107,12 @@ const TRANSLATIONS = {
     newPassword: "New password",
     noSongsAvailable: "No songs are available yet.",
     photo: "Photo",
-    playForward: "Press play, then move forward",
+    playForward: "Press PLAY",
+    playForwardAction: "PLAY",
+    playForwardLead: "Press",
     profile: "Profile",
     profileHint: "Profile customization and listener points can grow from here next.",
-    randomDiscovery: "Random discovery",
+    randomDiscovery: "Find new songs",
     register: "Register",
     search: "Search",
     searchLabel: "Search songs and artists",
@@ -64,14 +123,15 @@ const TRANSLATIONS = {
     streams: "streams",
     theme: "Theme",
     topSongs: "Top 10",
-    topSongsHeading: "this month",
+    topSongsHeading: "This Month",
     uploadPhoto: "Upload photo",
   },
   lt: {
     artist: "Atlikejas",
+    artistName: "Atlikejo vardas",
     artists: "Atlikejai",
     contact: "Kontaktai",
-    contactEmail: "Kol kas: hello@neo-musica.local",
+    contactEmail: "realmartynassutkus@gmail.com",
     currentPassword: "Dabartinis slaptazodis",
     displayName: "Vardas",
     editProfile: "Keisti profili",
@@ -86,10 +146,12 @@ const TRANSLATIONS = {
     newPassword: "Naujas slaptazodis",
     noSongsAvailable: "Kol kas nera dainu.",
     photo: "Nuotrauka",
-    playForward: "Spausk groti, tada judek pirmyn",
+    playForward: "Spausk PLAY",
+    playForwardAction: "PLAY",
+    playForwardLead: "Spausk",
     profile: "Profilis",
     profileHint: "Profilio spalvos ir klausytojo taskai gali augti cia.",
-    randomDiscovery: "Atsitiktinis atradimas",
+    randomDiscovery: "Atrask naujas dainas",
     register: "Registruotis",
     search: "Ieskoti",
     searchLabel: "Ieskoti dainu ir atlikeju",
@@ -100,7 +162,7 @@ const TRANSLATIONS = {
     streams: "perklausos",
     theme: "Tema",
     topSongs: "Top 10",
-    topSongsHeading: "si menesi",
+    topSongsHeading: "Si Menesi",
     uploadPhoto: "Ikelti nuotrauka",
   },
 };
@@ -134,6 +196,12 @@ function getAuthHeaders(authToken) {
 
 function getAssetUrl(path) {
   return path ? `${API_BASE_URL}${path}` : "";
+}
+
+function getArtistProfilePath(artistId, currentUser, songId = null) {
+  const basePath = currentUser?.id === artistId ? "/profile" : `/artists/${artistId}`;
+
+  return songId ? `${basePath}?song=${songId}` : basePath;
 }
 
 function createObjectUrl(file) {
@@ -290,15 +358,24 @@ function validateVideoDuration(file, maxSeconds) {
   });
 }
 
-function TrackPlayButton({ song, isActive, onPlay }) {
+function TrackPlayButton({ song, isActive, isPlaying, onPlay, onTogglePlayback }) {
+  function handleClick() {
+    if (isActive) {
+      onTogglePlayback();
+      return;
+    }
+
+    onPlay(song);
+  }
+
   return (
     <button
       type="button"
       className="inline-play-button"
-      onClick={() => onPlay(song)}
-      aria-label={`Play ${song.title}`}
+      onClick={handleClick}
+      aria-label={isActive ? `Pause ${song.title}` : `Play ${song.title}`}
     >
-      {isActive ? "♪ ON" : "▶ GO"}
+      {isActive && isPlaying ? "Ⅱ" : "▶"}
     </button>
   );
 }
@@ -561,37 +638,7 @@ function GlobalSongPlayer({
   );
 }
 
-function PublicSongList({ songs, initialSongId = null, activeSongId = null, onPlaySong }) {
-  if (songs.length === 0) {
-    return <p className="empty-state">No songs uploaded yet.</p>;
-  }
-
-  return (
-    <div className="song-list">
-      {songs.map((song, index) => (
-        <article className="song-item" key={song.id}>
-          {song.coverUrl ? (
-            <img src={getAssetUrl(song.coverUrl)} alt={`${song.title} cover`} />
-          ) : (
-            <div className="song-cover-placeholder">♪</div>
-          )}
-          <div className="song-details">
-            <h3>{song.title}</h3>
-            <p>{song.artistName}</p>
-            {song.description ? <p className="song-description">{song.description}</p> : null}
-            <TrackPlayButton
-              song={song}
-              isActive={activeSongId === song.id || initialSongId === song.id}
-              onPlay={() => onPlaySong(songs, index)}
-            />
-          </div>
-        </article>
-      ))}
-    </div>
-  );
-}
-
-function RandomSongPlayer({ song, t }) {
+function RandomSongPlayer({ currentUser, song, t, onStartRandom }) {
   const [isInfoOpaque, setIsInfoOpaque] = useState(false);
   const [isDraggingInfo, setIsDraggingInfo] = useState(false);
   const [infoPosition, setInfoPosition] = useState({ x: 0, y: 0 });
@@ -704,7 +751,12 @@ function RandomSongPlayer({ song, t }) {
       <div className="section-heading">
         <div>
           <p className="eyebrow">{t("randomDiscovery")}</p>
-          <h2>{t("playForward")}</h2>
+          <h2 className="discovery-play-line">
+            {t("playForwardLead")}{" "}
+            <button type="button" className="discovery-play-button" onClick={onStartRandom}>
+              {t("playForwardAction")}
+            </button>
+          </h2>
         </div>
       </div>
       {song && activeInfoCard ? (
@@ -751,7 +803,7 @@ function RandomSongPlayer({ song, t }) {
               <p className="eyebrow">{activeInfoCard.eyebrow}</p>
               <h3>{activeInfoCard.title}</h3>
               {activeInfoIndex === 1 ? (
-                <Link className="text-link" to={`/artists/${song.artist?.id}`}>
+                <Link className="text-link" to={getArtistProfilePath(song.artist?.id, currentUser)}>
                   {song.artistName}
                 </Link>
               ) : null}
@@ -775,13 +827,12 @@ function RandomSongPlayer({ song, t }) {
 }
 
 function HomePage({
+  currentUser,
   randomSong,
   prepareFreshRandomQueue,
+  startRandomQueue,
   topSongs,
   loadTopSongs,
-  searchArtists,
-  searchSongs,
-  hasSearched,
   searchError,
   t,
 }) {
@@ -809,56 +860,13 @@ function HomePage({
       <SongBackdrop song={randomSong} />
       <section className="discovery-panel">
         {error || searchError ? <p className="form-error">{error || searchError}</p> : null}
-        {hasSearched ? (
-          <div className="artist-results">
-            {searchSongs.length === 0 && searchArtists.length === 0 ? (
-              <p className="empty-state">No songs or artists found.</p>
-            ) : null}
-            {searchSongs.length ? (
-              <div className="search-result-group">
-                <p className="eyebrow">{t("songs")}</p>
-                {searchSongs.map((searchSong) => (
-                  <Link
-                    className="artist-result song-search-result"
-                    to={`/artists/${searchSong.artist?.id}?song=${searchSong.id}`}
-                    key={searchSong.id}
-                  >
-                    {searchSong.coverUrl ? (
-                      <img
-                        src={getAssetUrl(searchSong.coverUrl)}
-                        alt={`${searchSong.title} cover`}
-                      />
-                    ) : (
-                      <span>♪</span>
-                    )}
-                    <div>
-                      <strong>{searchSong.title}</strong>
-                      <p>{searchSong.artistName}</p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : null}
-            {searchArtists.length ? (
-              <div className="search-result-group">
-                <p className="eyebrow">{t("artists")}</p>
-                {searchArtists.map((artist) => (
-                  <Link className="artist-result" to={`/artists/${artist.id}`} key={artist.id}>
-                    <ArtistAvatar artist={artist} />
-                    <div>
-                      <strong>{artist.displayName}</strong>
-                      <p>
-                        {artist.songCount} songs · {artist.followerCount} followers
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
       </section>
-      <RandomSongPlayer song={randomSong} t={t} />
+      <RandomSongPlayer
+        currentUser={currentUser}
+        song={randomSong}
+        t={t}
+        onStartRandom={startRandomQueue}
+      />
       <button
         type="button"
         className="top-songs-toggle"
@@ -877,7 +885,7 @@ function HomePage({
             {topSongs.map((topSong, index) => (
               <Link
                 className="top-song-item"
-                to={`/artists/${topSong.artist?.id}?song=${topSong.id}`}
+                to={getArtistProfilePath(topSong.artist?.id, currentUser, topSong.id)}
                 key={topSong.id}
                 onClick={() => setIsTopSongsOpen(false)}
               >
@@ -987,13 +995,17 @@ function ProfilePage({
   onUserUpdate,
   activeSongId,
   activeSong,
+  isPlayerPlaying,
   onPlaySong,
+  onTogglePlayback,
   theme,
   onThemeChange,
   language,
   onLanguageChange,
   t,
 }) {
+  const [searchParams] = useSearchParams();
+  const selectedSongId = searchParams.get("song");
   const [songs, setSongs] = useState([]);
   const [songLimit, setSongLimit] = useState(10);
   const [social, setSocial] = useState({ followers: [], following: [] });
@@ -1004,11 +1016,12 @@ function ProfilePage({
   const [profileImageFile, setProfileImageFile] = useState(null);
   const [profileEditError, setProfileEditError] = useState("");
   const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
-  const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(true);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isUploadingProfileImage, setIsUploadingProfileImage] = useState(false);
   const [editingSongId, setEditingSongId] = useState(null);
-  const [editForm, setEditForm] = useState({ title: "", artistName: "", description: "" });
+  const [openSongMenuId, setOpenSongMenuId] = useState(null);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ title: "", description: "", visualMode: "video" });
   const [profileForm, setProfileForm] = useState({
     displayName: currentUser?.displayName || "",
     currentPassword: "",
@@ -1064,6 +1077,18 @@ function ProfilePage({
   }, [authToken]);
 
   useEffect(() => {
+    if (!selectedSongId || songs.length === 0) {
+      return;
+    }
+
+    const selectedIndex = songs.findIndex((song) => song.id === selectedSongId);
+
+    if (selectedIndex >= 0) {
+      onPlaySong(songs, selectedIndex);
+    }
+  }, [selectedSongId, songs]);
+
+  useEffect(() => {
     setProfileForm((currentForm) => ({
       ...currentForm,
       displayName: currentUser?.displayName || "",
@@ -1072,10 +1097,11 @@ function ProfilePage({
 
   function startEditing(song) {
     setEditingSongId(song.id);
+    setOpenSongMenuId(null);
     setEditForm({
       title: song.title,
-      artistName: song.artistName,
       description: song.description,
+      visualMode: song.slideshowImageUrls?.length ? "photos" : "video",
     });
   }
 
@@ -1083,10 +1109,28 @@ function ProfilePage({
     event.preventDefault();
 
     try {
+      const formData = new FormData(event.currentTarget);
+      const backgroundVideo = formData.get("backgroundVideo");
+      const slideshowImages = formData
+        .getAll("slideshowImages")
+        .filter((file) => file instanceof File && file.size > 0);
+
+      if (backgroundVideo instanceof File && backgroundVideo.size > 0 && slideshowImages.length) {
+        throw new Error("Choose either a background video or slideshow photos, not both.");
+      }
+
+      if (slideshowImages.length > 5) {
+        throw new Error("Choose up to 5 slideshow photos.");
+      }
+
+      if (backgroundVideo instanceof File && backgroundVideo.size > 0) {
+        await validateVideoDuration(backgroundVideo, 6);
+      }
+
       await requestJson(`/api/songs/${songId}`, {
         method: "PATCH",
         headers: getAuthHeaders(authToken),
-        body: JSON.stringify(editForm),
+        body: formData,
       });
       setEditingSongId(null);
       await loadSongs();
@@ -1120,6 +1164,7 @@ function ProfilePage({
       });
 
       onUserUpdate(data.user);
+      await loadSongs();
       setProfileForm((currentForm) => ({
         ...currentForm,
         currentPassword: "",
@@ -1198,261 +1243,258 @@ function ProfilePage({
       }`}
     >
       <SongBackdrop song={backdropSong} fallbackImages={getSongBackdropImages(songs)} />
-      {isProfilePanelOpen ? (
-        <section className="content-panel profile-panel">
-          <div className="profile-heading">
-            <div>
-              <h1>{currentUser.displayName}</h1>
-              <p>{currentUser.email}</p>
-            </div>
-            <div className="profile-heading-actions">
+      <section className="content-panel profile-panel">
+        <div className="profile-preview">
+          <div className="profile-card-menu song-menu">
+            <button
+              type="button"
+              className="song-menu-toggle"
+              onClick={() => setIsProfileMenuOpen((currentValue) => !currentValue)}
+              aria-label="Profile options"
+            >
+              ⋮
+            </button>
+            {isProfileMenuOpen ? (
+              <div className="song-menu-popover">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProfileEditorOpen(true);
+                    setIsProfileMenuOpen(false);
+                  }}
+                >
+                  Edit profile
+                </button>
+              </div>
+            ) : null}
+          </div>
+          <ArtistAvatar artist={currentUser} className="profile-preview-avatar" />
+          <div className="profile-preview-body">
+            <h1>{currentUser.displayName}</h1>
+            <strong>{t("listenerProfile")}</strong>
+            <p>{t("profileHint")}</p>
+            <div className="social-summary">
               <button
                 type="button"
                 className="secondary-button"
-                onClick={() => setIsProfileEditorOpen(true)}
+                onClick={() =>
+                  setOpenSocialList(openSocialList === "followers" ? null : "followers")
+                }
               >
-                {t("editProfile")}
+                {social.followers.length} {t("followers")}
               </button>
               <button
                 type="button"
-                className="icon-button"
-                onClick={() => setIsProfilePanelOpen(false)}
-                aria-label="Close profile panel"
+                className="secondary-button"
+                onClick={() =>
+                  setOpenSocialList(openSocialList === "following" ? null : "following")
+                }
               >
-                ×
+                {social.following.length} {t("following")}
               </button>
             </div>
           </div>
-          <div className="profile-preview">
-            <ArtistAvatar artist={currentUser} className="profile-preview-avatar" />
-            <div>
-              <strong>{t("listenerProfile")}</strong>
-              <p>{t("profileHint")}</p>
-            </div>
-          </div>
-          {isProfileEditorOpen ? (
-            <div className="modal-backdrop" role="presentation">
-              <section className="profile-edit-modal" aria-label="Edit profile">
-                <div className="modal-header">
-                  <h2>{t("editProfile")}</h2>
-                  <button
-                    type="button"
-                    className="icon-button"
-                    onClick={() => setIsProfileEditorOpen(false)}
-                    aria-label="Close"
-                  >
-                    ×
-                  </button>
-                </div>
-                <form className="profile-edit-form" onSubmit={handleProfileDetailsSubmit}>
-                  <label>
-                    {t("displayName")}
-                    <input
-                      value={profileForm.displayName}
-                      onChange={(event) =>
-                        setProfileForm((currentForm) => ({
-                          ...currentForm,
-                          displayName: event.target.value,
-                        }))
-                      }
-                      required
-                    />
-                  </label>
-                  <section className="profile-photo-editor" aria-label={t("photo")}>
-                    <div>
-                      <p className="form-label">{t("photo")}</p>
-                      <button
-                        type="button"
-                        className="secondary-button"
-                        onClick={() => profileFileInputRef.current?.click()}
-                      >
-                        {t("uploadPhoto")}
-                      </button>
-                      <input
-                        ref={profileFileInputRef}
-                        className="hidden-file-input"
-                        name="profileImage"
-                        type="file"
-                        accept=".jpg,.jpeg,.png,.webp,image/*"
-                        onChange={handleProfileImageChange}
-                      />
-                    </div>
-                    {profilePreviewUrl ? (
-                      <img
-                        className="upload-preview-image"
-                        src={profilePreviewUrl}
-                        alt="Profile preview"
-                      />
-                    ) : (
-                      <ArtistAvatar artist={currentUser} className="profile-preview-avatar" />
-                    )}
-                    {profileImageError ? <p className="form-error">{profileImageError}</p> : null}
+        </div>
+        {isProfileEditorOpen ? (
+          <div className="modal-backdrop" role="presentation">
+            <section className="profile-edit-modal" aria-label="Edit profile">
+              <div className="modal-header">
+                <h2>{t("editProfile")}</h2>
+                <button
+                  type="button"
+                  className="icon-button"
+                  onClick={() => setIsProfileEditorOpen(false)}
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+              </div>
+              <form className="profile-edit-form" onSubmit={handleProfileDetailsSubmit}>
+                <label>
+                  {t("artistName")}
+                  <input
+                    value={profileForm.displayName}
+                    onChange={(event) =>
+                      setProfileForm((currentForm) => ({
+                        ...currentForm,
+                        displayName: event.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </label>
+                <section className="profile-photo-editor" aria-label={t("photo")}>
+                  <div>
+                    <p className="form-label">{t("photo")}</p>
                     <button
                       type="button"
                       className="secondary-button"
-                      onClick={handleProfileImageUpload}
-                      disabled={isUploadingProfileImage || !profileImageFile}
+                      onClick={() => profileFileInputRef.current?.click()}
                     >
-                      {isUploadingProfileImage ? "Uploading..." : "Save picture"}
+                      {t("uploadPhoto")}
                     </button>
-                  </section>
-                  <label>
-                    {t("currentPassword")}
                     <input
-                      type="password"
-                      value={profileForm.currentPassword}
-                      onChange={(event) =>
-                        setProfileForm((currentForm) => ({
-                          ...currentForm,
-                          currentPassword: event.target.value,
-                        }))
-                      }
+                      ref={profileFileInputRef}
+                      className="hidden-file-input"
+                      name="profileImage"
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp,image/*"
+                      onChange={handleProfileImageChange}
                     />
-                  </label>
-                  <label>
-                    {t("newPassword")}
-                    <input
-                      type="password"
-                      minLength="8"
-                      value={profileForm.newPassword}
-                      onChange={(event) =>
-                        setProfileForm((currentForm) => ({
-                          ...currentForm,
-                          newPassword: event.target.value,
-                        }))
-                      }
+                  </div>
+                  {profilePreviewUrl ? (
+                    <img
+                      className="upload-preview-image"
+                      src={profilePreviewUrl}
+                      alt="Profile preview"
                     />
-                  </label>
-                  <section className="theme-picker" aria-label="Theme selection">
-                    <p className="form-label">{t("theme")}</p>
-                    <div>
-                      {THEMES.map((themeOption) => (
-                        <button
-                          type="button"
-                          className={theme === themeOption.id ? "is-selected" : ""}
-                          style={{ "--swatch-color": themeOption.swatch }}
-                          onClick={() => onThemeChange(themeOption.id)}
-                          aria-label={themeOption.label}
-                          key={themeOption.id}
-                        />
-                      ))}
-                    </div>
-                  </section>
-                  <section className="language-picker" aria-label="Language selection">
-                    <p className="form-label">{t("language")}</p>
-                    <div>
-                      {LANGUAGES.map((languageOption) => (
-                        <button
-                          type="button"
-                          className={language === languageOption.id ? "is-selected" : ""}
-                          onClick={() => onLanguageChange(languageOption.id)}
-                          key={languageOption.id}
-                        >
-                          {languageOption.label}
-                        </button>
-                      ))}
-                    </div>
-                  </section>
-                  {profileEditError ? <p className="form-error">{profileEditError}</p> : null}
-                  <button type="submit" disabled={isSavingProfile}>
-                    {isSavingProfile ? "Saving..." : t("saveProfile")}
-                  </button>
-                </form>
-              </section>
-            </div>
-          ) : null}
-          <div className="social-summary">
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => setOpenSocialList(openSocialList === "followers" ? null : "followers")}
-            >
-              {social.followers.length} {t("followers")}
-            </button>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => setOpenSocialList(openSocialList === "following" ? null : "following")}
-            >
-              {social.following.length} {t("following")}
-            </button>
-          </div>
-          {openSocialList ? (
-            <div className="social-list">
-              {(openSocialList === "followers" ? social.followers : social.following).length ===
-              0 ? (
-                <p className="empty-state">
-                  {openSocialList === "followers"
-                    ? "No followers yet."
-                    : "You are not following anyone yet."}
-                </p>
-              ) : (
-                (openSocialList === "followers" ? social.followers : social.following).map(
-                  (artist) => (
-                    <Link className="artist-result" to={`/artists/${artist.id}`} key={artist.id}>
-                      <ArtistAvatar artist={artist} />
-                      <div>
-                        <strong>{artist.displayName}</strong>
-                        <p>
-                          {artist.songCount} songs · {artist.followerCount} followers
-                        </p>
-                      </div>
-                    </Link>
-                  ),
-                )
-              )}
-            </div>
-          ) : null}
-          <div className="library-header">
-            <div>
-              <h2>Your songs</h2>
-              <p>
-                {songs.length} of {songLimit} uploads used
-              </p>
-            </div>
-            <Link className="text-link" to="/songs/new">
-              Add song
-            </Link>
-          </div>
-          {error ? <p className="form-error">{error}</p> : null}
-          <div className="song-list">
-            {songs.length === 0 ? (
-              <p className="empty-state">No songs uploaded yet.</p>
-            ) : (
-              songs.map((song, index) => (
-                <article className="song-item" key={song.id}>
-                  {song.coverUrl ? (
-                    <img src={getAssetUrl(song.coverUrl)} alt={`${song.title} cover`} />
                   ) : (
-                    <div className="song-cover-placeholder">♪</div>
+                    <ArtistAvatar artist={currentUser} className="profile-preview-avatar" />
                   )}
-                  <div className="song-details">
-                    {editingSongId === song.id ? (
-                      <form
-                        className="song-edit-form"
-                        onSubmit={(event) => handleEditSubmit(event, song.id)}
+                  {profileImageError ? <p className="form-error">{profileImageError}</p> : null}
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={handleProfileImageUpload}
+                    disabled={isUploadingProfileImage || !profileImageFile}
+                  >
+                    {isUploadingProfileImage ? "Uploading..." : "Save picture"}
+                  </button>
+                </section>
+                <label>
+                  {t("currentPassword")}
+                  <input
+                    type="password"
+                    value={profileForm.currentPassword}
+                    onChange={(event) =>
+                      setProfileForm((currentForm) => ({
+                        ...currentForm,
+                        currentPassword: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  {t("newPassword")}
+                  <input
+                    type="password"
+                    minLength="8"
+                    value={profileForm.newPassword}
+                    onChange={(event) =>
+                      setProfileForm((currentForm) => ({
+                        ...currentForm,
+                        newPassword: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <section className="theme-picker" aria-label="Theme selection">
+                  <p className="form-label">{t("theme")}</p>
+                  <div>
+                    {THEMES.map((themeOption) => (
+                      <button
+                        type="button"
+                        className={theme === themeOption.id ? "is-selected" : ""}
+                        style={{ "--swatch-color": themeOption.swatch }}
+                        onClick={() => onThemeChange(themeOption.id)}
+                        aria-label={themeOption.label}
+                        key={themeOption.id}
+                      />
+                    ))}
+                  </div>
+                </section>
+                <section className="language-picker" aria-label="Language selection">
+                  <p className="form-label">{t("language")}</p>
+                  <div>
+                    {LANGUAGES.map((languageOption) => (
+                      <button
+                        type="button"
+                        className={language === languageOption.id ? "is-selected" : ""}
+                        onClick={() => onLanguageChange(languageOption.id)}
+                        key={languageOption.id}
                       >
+                        {languageOption.label}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+                {profileEditError ? <p className="form-error">{profileEditError}</p> : null}
+                <button type="submit" disabled={isSavingProfile}>
+                  {isSavingProfile ? "Saving..." : t("saveProfile")}
+                </button>
+              </form>
+            </section>
+          </div>
+        ) : null}
+        {openSocialList ? (
+          <div className="social-list">
+            {(openSocialList === "followers" ? social.followers : social.following).length === 0 ? (
+              <p className="empty-state">
+                {openSocialList === "followers"
+                  ? "No followers yet."
+                  : "You are not following anyone yet."}
+              </p>
+            ) : (
+              (openSocialList === "followers" ? social.followers : social.following).map(
+                (artist) => (
+                  <Link className="artist-result" to={`/artists/${artist.id}`} key={artist.id}>
+                    <ArtistAvatar artist={artist} />
+                    <div>
+                      <strong>{artist.displayName}</strong>
+                      <p>
+                        {artist.songCount} songs · {artist.followerCount} followers
+                      </p>
+                    </div>
+                  </Link>
+                ),
+              )
+            )}
+          </div>
+        ) : null}
+        <div className="library-header">
+          <div>
+            <h2>Music</h2>
+            <p>
+              {songs.length} of {songLimit} upload used
+            </p>
+          </div>
+          <Link className="add-song-link" to="/songs/new">
+            Add song
+          </Link>
+        </div>
+        {error ? <p className="form-error">{error}</p> : null}
+        <div className="song-list">
+          {songs.length === 0 ? (
+            <p className="empty-state">No songs uploaded yet.</p>
+          ) : (
+            songs.map((song, index) => (
+              <article className="song-item" key={song.id}>
+                {song.coverUrl ? (
+                  <img src={getAssetUrl(song.coverUrl)} alt={`${song.title} cover`} />
+                ) : (
+                  <div className="song-cover-placeholder">♪</div>
+                )}
+                <div className="song-details">
+                  {editingSongId === song.id ? (
+                    <form
+                      className="song-edit-form"
+                      onSubmit={(event) => handleEditSubmit(event, song.id)}
+                    >
+                      <label>
+                        Song title
                         <input
-                          aria-label="Song title"
+                          name="title"
                           value={editForm.title}
                           onChange={(event) =>
                             setEditForm((current) => ({ ...current, title: event.target.value }))
                           }
                           required
                         />
-                        <input
-                          aria-label="Artist name"
-                          value={editForm.artistName}
-                          onChange={(event) =>
-                            setEditForm((current) => ({
-                              ...current,
-                              artistName: event.target.value,
-                            }))
-                          }
-                          required
-                        />
+                      </label>
+                      <label>
+                        Description
                         <textarea
-                          aria-label="Description"
+                          name="description"
                           rows="3"
                           value={editForm.description}
                           onChange={(event) =>
@@ -1462,63 +1504,125 @@ function ProfilePage({
                             }))
                           }
                         />
-                        <div className="song-actions">
-                          <button type="submit">Save</button>
+                      </label>
+                      <label>
+                        Cover photo
+                        <input
+                          name="coverImage"
+                          type="file"
+                          accept=".jpg,.jpeg,.png,.webp,image/*"
+                        />
+                      </label>
+                      <div className="background-upload-group">
+                        <p className="form-label">Background visuals</p>
+                        <div
+                          className="visual-mode-switch"
+                          role="group"
+                          aria-label="Edit visual type"
+                        >
                           <button
                             type="button"
-                            className="secondary-button"
-                            onClick={() => setEditingSongId(null)}
+                            className={editForm.visualMode === "video" ? "is-selected" : ""}
+                            onClick={() =>
+                              setEditForm((current) => ({ ...current, visualMode: "video" }))
+                            }
                           >
-                            Cancel
+                            Video
+                          </button>
+                          <button
+                            type="button"
+                            className={editForm.visualMode === "photos" ? "is-selected" : ""}
+                            onClick={() =>
+                              setEditForm((current) => ({ ...current, visualMode: "photos" }))
+                            }
+                          >
+                            Photos
                           </button>
                         </div>
-                      </form>
-                    ) : (
-                      <>
+                        {editForm.visualMode === "video" ? (
+                          <label>
+                            Short video
+                            <input
+                              name="backgroundVideo"
+                              type="file"
+                              accept=".mp4,.webm,.mov,.m4v,video/*"
+                            />
+                          </label>
+                        ) : (
+                          <label>
+                            Slideshow photos
+                            <input
+                              name="slideshowImages"
+                              type="file"
+                              accept=".jpg,.jpeg,.png,.webp,image/*"
+                              multiple
+                            />
+                          </label>
+                        )}
+                      </div>
+                      <div className="song-actions">
+                        <button type="submit">Save</button>
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={() => setEditingSongId(null)}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="profile-song-row">
+                      <div>
                         <h3>{song.title}</h3>
                         <p>{song.artistName}</p>
-                        {song.description ? (
-                          <p className="song-description">{song.description}</p>
+                      </div>
+                      <TrackPlayButton
+                        song={song}
+                        isActive={activeSongId === song.id}
+                        isPlaying={isPlayerPlaying && activeSongId === song.id}
+                        onPlay={() => onPlaySong(songs, index)}
+                        onTogglePlayback={onTogglePlayback}
+                      />
+                      <div className="song-menu">
+                        <button
+                          type="button"
+                          className="song-menu-toggle"
+                          onClick={() =>
+                            setOpenSongMenuId(openSongMenuId === song.id ? null : song.id)
+                          }
+                          aria-label={`More options for ${song.title}`}
+                        >
+                          ⋮
+                        </button>
+                        {openSongMenuId === song.id ? (
+                          <div className="song-menu-popover">
+                            <button type="button" onClick={() => startEditing(song)}>
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className="danger-menu-button"
+                              onClick={() => handleDelete(song.id)}
+                            >
+                              Delete
+                            </button>
+                          </div>
                         ) : null}
-                        <TrackPlayButton
-                          song={song}
-                          isActive={activeSongId === song.id}
-                          onPlay={() => onPlaySong(songs, index)}
-                        />
-                        <div className="song-actions">
-                          <button type="button" onClick={() => startEditing(song)}>
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            className="danger-button"
-                            onClick={() => handleDelete(song.id)}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </article>
-              ))
-            )}
-          </div>
-          <div className="profile-logout">
-            <button type="button" className="danger-button" onClick={onLogout}>
-              Logout
-            </button>
-          </div>
-        </section>
-      ) : (
-        <button
-          type="button"
-          className="profile-panel-reopen"
-          onClick={() => setIsProfilePanelOpen(true)}
-        >
-          {t("profile")}
-        </button>
-      )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </article>
+            ))
+          )}
+        </div>
+        <div className="profile-logout">
+          <button type="button" className="danger-button" onClick={onLogout}>
+            Logout
+          </button>
+        </div>
+      </section>
     </main>
   );
 }
@@ -1710,15 +1814,10 @@ function SongUploadPage({ currentUser, authToken }) {
     <main className="page-shell">
       <section className="content-panel upload-panel">
         <p className="eyebrow">Share a track</p>
-        <h1>Add song</h1>
         <form className="auth-form upload-form" onSubmit={handleSubmit}>
           <label>
             Song title
             <input name="title" required />
-          </label>
-          <label>
-            Artist name
-            <input name="artistName" defaultValue={currentUser.displayName} required />
           </label>
           <label>
             Description
@@ -1813,7 +1912,15 @@ function SongUploadPage({ currentUser, authToken }) {
   );
 }
 
-function ArtistPage({ currentUser, authToken, activeSongId, onPlaySong }) {
+function ArtistPage({
+  currentUser,
+  authToken,
+  activeSongId,
+  isPlayerPlaying,
+  onPlaySong,
+  onTogglePlayback,
+}) {
+  const navigate = useNavigate();
   const { artistId } = useParams();
   const [searchParams] = useSearchParams();
   const selectedSongId = searchParams.get("song");
@@ -1839,6 +1946,17 @@ function ArtistPage({ currentUser, authToken, activeSongId, onPlaySong }) {
   useEffect(() => {
     loadArtist();
   }, [artistId, authToken]);
+
+  useEffect(() => {
+    if (artist?.isSelf) {
+      navigate(
+        selectedSongId ? `/profile?song=${encodeURIComponent(selectedSongId)}` : "/profile",
+        {
+          replace: true,
+        },
+      );
+    }
+  }, [artist?.isSelf, navigate, selectedSongId]);
 
   useEffect(() => {
     if (!selectedSongId || songs.length === 0) {
@@ -1903,43 +2021,66 @@ function ArtistPage({ currentUser, authToken, activeSongId, onPlaySong }) {
         song={songs.find((song) => song.backgroundVideoUrl)}
         fallbackImages={getSongBackdropImages(songs)}
       />
-      <section className="content-panel artist-profile-panel">
-        <div className="artist-profile-header">
-          <ArtistAvatar artist={artist} />
-          <div>
-            <p className="eyebrow">Artist</p>
+      <section className="content-panel profile-panel">
+        <div className="profile-preview">
+          <ArtistAvatar artist={artist} className="profile-preview-avatar" />
+          <div className="profile-preview-body">
             <h1>{artist.displayName}</h1>
-            <p>
-              {artist.songCount} songs · {artist.followerCount} followers
-            </p>
+            <strong>Artist</strong>
+            <p>{artist.songCount} songs</p>
+            <div className="social-summary">
+              <button type="button" className="secondary-button">
+                {artist.followerCount} followers
+              </button>
+              {currentUser ? (
+                <button type="button" className="follow-button" onClick={handleFollowToggle}>
+                  {isFollowing ? "Following" : "Follow"}
+                </button>
+              ) : (
+                <Link className="secondary-button profile-action-link" to="/login">
+                  Login to follow
+                </Link>
+              )}
+            </div>
           </div>
         </div>
-        {artist.isSelf ? (
-          <Link className="text-link" to="/profile">
-            Manage your profile
-          </Link>
-        ) : currentUser ? (
-          <button type="button" className="follow-button" onClick={handleFollowToggle}>
-            {isFollowing ? "Following" : "Follow"}
-          </button>
-        ) : (
-          <Link className="text-link" to="/login">
-            Login to follow
-          </Link>
-        )}
         {error ? <p className="form-error">{error}</p> : null}
         <div className="library-header">
           <div>
             <h2>Music</h2>
-            <p>{songs.length} tracks available</p>
+            <p>{songs.length} of 10 upload used</p>
           </div>
         </div>
-        <PublicSongList
-          songs={songs}
-          initialSongId={selectedSongId}
-          activeSongId={activeSongId}
-          onPlaySong={onPlaySong}
-        />
+        <div className="song-list">
+          {songs.length === 0 ? (
+            <p className="empty-state">No songs uploaded yet.</p>
+          ) : (
+            songs.map((song, index) => (
+              <article className="song-item" key={song.id}>
+                {song.coverUrl ? (
+                  <img src={getAssetUrl(song.coverUrl)} alt={`${song.title} cover`} />
+                ) : (
+                  <div className="song-cover-placeholder">♪</div>
+                )}
+                <div className="song-details">
+                  <div className="profile-song-row public-song-row">
+                    <div>
+                      <h3>{song.title}</h3>
+                      <p>{song.artistName}</p>
+                    </div>
+                    <TrackPlayButton
+                      song={song}
+                      isActive={activeSongId === song.id}
+                      isPlaying={isPlayerPlaying && activeSongId === song.id}
+                      onPlay={() => onPlaySong(songs, index)}
+                      onTogglePlayback={onTogglePlayback}
+                    />
+                  </div>
+                </div>
+              </article>
+            ))
+          )}
+        </div>
       </section>
     </main>
   );
@@ -1976,10 +2117,10 @@ export default function App() {
   const [searchArtists, setSearchArtists] = useState([]);
   const [searchSongs, setSearchSongs] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchError, setSearchError] = useState("");
-  const [brandVariant, setBrandVariant] = useState(0);
   const [isFooterVisible, setIsFooterVisible] = useState(false);
-  const brandHoverTimerRef = useRef(null);
+  const textHoverRef = useRef(null);
 
   useEffect(() => {
     if (!authToken) {
@@ -2054,14 +2195,18 @@ export default function App() {
     const query = searchQuery.trim();
 
     setSearchError("");
-    setHasSearched(true);
     navigate("/");
 
     if (!query) {
+      setHasSearched(false);
+      setIsSearchOpen(false);
       setSearchArtists([]);
       setSearchSongs([]);
       return;
     }
+
+    setHasSearched(true);
+    setIsSearchOpen(true);
 
     try {
       const data = await requestJson(`/api/search?q=${encodeURIComponent(query)}`, {
@@ -2072,6 +2217,15 @@ export default function App() {
     } catch (error) {
       setSearchError(error.message);
     }
+  }
+
+  function clearSearch() {
+    setSearchQuery("");
+    setSearchArtists([]);
+    setSearchSongs([]);
+    setHasSearched(false);
+    setIsSearchOpen(false);
+    setSearchError("");
   }
 
   useEffect(() => {
@@ -2097,7 +2251,100 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    return () => window.clearInterval(brandHoverTimerRef.current);
+    function handleSearchClickAway(event) {
+      if (!isSearchOpen) {
+        return;
+      }
+
+      if (event.target.closest(".header-search-form, .search-results-popover")) {
+        return;
+      }
+
+      setIsSearchOpen(false);
+    }
+
+    document.addEventListener("pointerdown", handleSearchClickAway);
+
+    return () => document.removeEventListener("pointerdown", handleSearchClickAway);
+  }, [isSearchOpen]);
+
+  useEffect(() => {
+    function getHoverTextTarget(event) {
+      if (event.target.closest("input, textarea, select, audio, video")) {
+        return null;
+      }
+
+      const target = event.target.closest(
+        "button, h1, h2, h3, p, strong, nav a, .text-link, .profile-action-link, .add-song-link, .top-songs-toggle, .empty-state, .form-label",
+      );
+
+      if (!target || !target.textContent?.trim() || !/[a-zA-Z0-9]/.test(target.textContent)) {
+        return null;
+      }
+
+      if (target.matches(".artist-result, .top-song-item")) {
+        return null;
+      }
+
+      return target;
+    }
+
+    function paintHoverText(target) {
+      const [fontFamily, color] = BRAND_STYLES[Math.floor(Math.random() * BRAND_VARIANT_COUNT)];
+      const [, backgroundColor] = BRAND_STYLES[Math.floor(Math.random() * BRAND_VARIANT_COUNT)];
+      target.style.setProperty("--flicker-font", fontFamily);
+      target.style.setProperty("--flicker-color", color);
+      target.style.setProperty("--flicker-background", backgroundColor);
+    }
+
+    function clearTextHover() {
+      if (!textHoverRef.current) {
+        return;
+      }
+
+      window.clearInterval(textHoverRef.current.timer);
+      textHoverRef.current.target.classList.remove("is-text-flickering");
+      textHoverRef.current.target.removeAttribute("data-flicker-text");
+      textHoverRef.current.target.style.removeProperty("--flicker-font");
+      textHoverRef.current.target.style.removeProperty("--flicker-color");
+      textHoverRef.current.target.style.removeProperty("--flicker-background");
+      textHoverRef.current = null;
+    }
+
+    function handlePointerOver(event) {
+      const target = getHoverTextTarget(event);
+
+      if (!target || textHoverRef.current?.target === target) {
+        return;
+      }
+
+      clearTextHover();
+      target.dataset.flickerText = target.textContent.trim();
+      target.classList.add("is-text-flickering");
+      paintHoverText(target);
+      textHoverRef.current = {
+        target,
+        timer: window.setInterval(() => paintHoverText(target), 50),
+      };
+    }
+
+    function handlePointerOut(event) {
+      if (
+        textHoverRef.current?.target &&
+        !textHoverRef.current.target.contains(event.relatedTarget)
+      ) {
+        clearTextHover();
+      }
+    }
+
+    document.addEventListener("pointerover", handlePointerOver);
+    document.addEventListener("pointerout", handlePointerOut);
+
+    return () => {
+      document.removeEventListener("pointerover", handlePointerOver);
+      document.removeEventListener("pointerout", handlePointerOut);
+      clearTextHover();
+    };
   }, []);
 
   async function loadRandomSong({ autoPlay = true, primePlayer = false } = {}) {
@@ -2123,12 +2370,29 @@ export default function App() {
     return loadRandomSong({ autoPlay: false, primePlayer: true });
   }
 
+  function startRandomQueue() {
+    if (randomSong) {
+      setPlayerSong(randomSong);
+      setPlayerQueue([randomSong]);
+      setPlayerQueueIndex(0);
+      setPlayerMode("random");
+      setIsPlayerPlaying(true);
+      return Promise.resolve(randomSong);
+    }
+
+    return loadRandomSong({ autoPlay: true, primePlayer: true });
+  }
+
   function playSongQueue(songs, index) {
     setPlayerSong(songs[index]);
     setPlayerQueue(songs);
     setPlayerQueueIndex(index);
     setPlayerMode("queue");
     setIsPlayerPlaying(true);
+  }
+
+  function toggleCurrentSongPlayback() {
+    setIsPlayerPlaying((currentValue) => !currentValue);
   }
 
   function playPreviousSong() {
@@ -2188,20 +2452,6 @@ export default function App() {
     }
   }
 
-  function chooseRandomBrandVariant() {
-    setBrandVariant(Math.floor(Math.random() * BRAND_VARIANT_COUNT));
-  }
-
-  function handleBrandMouseEnter() {
-    window.clearInterval(brandHoverTimerRef.current);
-    chooseRandomBrandVariant();
-    brandHoverTimerRef.current = window.setInterval(chooseRandomBrandVariant, 250);
-  }
-
-  function handleBrandMouseLeave() {
-    window.clearInterval(brandHoverTimerRef.current);
-  }
-
   function handleThemeChange(nextTheme) {
     setTheme(nextTheme);
     localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
@@ -2222,12 +2472,7 @@ export default function App() {
   return (
     <div className={`app-shell theme-${theme}${shouldShowFooter ? " is-footer-visible" : ""}`}>
       <header className="site-header">
-        <button
-          type="button"
-          className={`brand brand-variant-${brandVariant}`}
-          onMouseEnter={handleBrandMouseEnter}
-          onMouseLeave={handleBrandMouseLeave}
-        >
+        <button type="button" className="brand">
           Neo Musica
         </button>
         <form className="artist-search-form header-search-form" onSubmit={handleHeaderSearch}>
@@ -2240,8 +2485,66 @@ export default function App() {
           />
           <button type="submit">{t("search")}</button>
         </form>
+        {isSearchOpen && hasSearched ? (
+          <section className="search-results-popover" aria-label="Search results">
+            <div className="artist-results">
+              {searchSongs.length === 0 && searchArtists.length === 0 ? (
+                <p className="empty-state">No songs or artists found.</p>
+              ) : null}
+              {searchSongs.length ? (
+                <div className="search-result-group">
+                  <p className="eyebrow">{t("songs")}</p>
+                  {searchSongs.map((searchSong) => (
+                    <Link
+                      className="artist-result song-search-result"
+                      to={getArtistProfilePath(searchSong.artist?.id, currentUser, searchSong.id)}
+                      onClick={() => setIsSearchOpen(false)}
+                      key={searchSong.id}
+                    >
+                      {searchSong.coverUrl ? (
+                        <img
+                          src={getAssetUrl(searchSong.coverUrl)}
+                          alt={`${searchSong.title} cover`}
+                        />
+                      ) : (
+                        <span>♪</span>
+                      )}
+                      <div>
+                        <strong>{searchSong.title}</strong>
+                        <p>{searchSong.artistName}</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : null}
+              {searchArtists.length ? (
+                <div className="search-result-group">
+                  <p className="eyebrow">{t("artists")}</p>
+                  {searchArtists.map((artist) => (
+                    <Link
+                      className="artist-result"
+                      to={getArtistProfilePath(artist.id, currentUser)}
+                      onClick={() => setIsSearchOpen(false)}
+                      key={artist.id}
+                    >
+                      <ArtistAvatar artist={artist} />
+                      <div>
+                        <strong>{artist.displayName}</strong>
+                        <p>
+                          {artist.songCount} songs · {artist.followerCount} followers
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
         <nav aria-label="Primary navigation">
-          <Link to="/">{t("home")}</Link>
+          <Link to="/" onClick={clearSearch}>
+            {t("home")}
+          </Link>
           {currentUser ? (
             <Link className="profile-nav-link" to="/profile" aria-label={t("profile")}>
               <ArtistAvatar artist={currentUser} className="header-profile-avatar" />
@@ -2265,13 +2568,12 @@ export default function App() {
           path="/"
           element={
             <HomePage
+              currentUser={currentUser}
               randomSong={randomSong}
               prepareFreshRandomQueue={prepareFreshRandomQueue}
+              startRandomQueue={startRandomQueue}
               topSongs={topSongs}
               loadTopSongs={loadTopSongs}
-              searchArtists={searchArtists}
-              searchSongs={searchSongs}
-              hasSearched={hasSearched}
               searchError={searchError}
               t={t}
             />
@@ -2295,7 +2597,9 @@ export default function App() {
               onUserUpdate={handleUserUpdate}
               activeSongId={playerSong?.id || null}
               activeSong={playerSong}
+              isPlayerPlaying={isPlayerPlaying}
               onPlaySong={playSongQueue}
+              onTogglePlayback={toggleCurrentSongPlayback}
               theme={theme}
               onThemeChange={handleThemeChange}
               language={language}
@@ -2315,7 +2619,9 @@ export default function App() {
               currentUser={currentUser}
               authToken={authToken}
               activeSongId={playerSong?.id || null}
+              isPlayerPlaying={isPlayerPlaying}
               onPlaySong={playSongQueue}
+              onTogglePlayback={toggleCurrentSongPlayback}
             />
           }
         />

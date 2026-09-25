@@ -607,7 +607,7 @@ export function createApp({ database, uploadsPath }) {
       try {
         const user = request.currentUser;
         const title = String(request.body.title || "").trim();
-        const artistName = String(request.body.artistName || user.displayName).trim();
+        const artistName = user.displayName;
         const description = String(request.body.description || "").trim();
         const audioFile = request.files?.audioFile?.[0];
         const coverImage = request.files?.coverImage?.[0];
@@ -631,11 +631,6 @@ export function createApp({ database, uploadsPath }) {
         if (!title) {
           deleteUploadedFiles(resolvedUploadsPath, uploadedFilenames);
           throw createHttpError("Song title is required.");
-        }
-
-        if (!artistName) {
-          deleteUploadedFiles(resolvedUploadsPath, uploadedFilenames);
-          throw createHttpError("Artist name is required.");
         }
 
         if (!audioFile) {
@@ -671,39 +666,105 @@ export function createApp({ database, uploadsPath }) {
     },
   );
 
-  app.patch("/api/songs/:songId", (request, response, next) => {
-    try {
-      const user = requireCurrentUser(request);
-      const existingSong = database.findSongByIdAndUserId(request.params.songId, user.id);
-
-      if (!existingSong) {
-        throw createHttpError("Song not found.", 404);
+  app.patch(
+    "/api/songs/:songId",
+    (request, _response, next) => {
+      try {
+        request.currentUser = requireCurrentUser(request);
+        next();
+      } catch (error) {
+        next(error);
       }
+    },
+    upload.fields([
+      { name: "coverImage", maxCount: 1 },
+      { name: "backgroundVideo", maxCount: 1 },
+      { name: "slideshowImages", maxCount: 5 },
+    ]),
+    (request, response, next) => {
+      const uploadedFilenames = [
+        request.files?.coverImage?.[0]?.filename,
+        request.files?.backgroundVideo?.[0]?.filename,
+        ...(request.files?.slideshowImages || []).map((file) => file.filename),
+      ];
 
-      const title = String(request.body.title || "").trim();
-      const artistName = String(request.body.artistName || "").trim();
+      try {
+        const user = request.currentUser;
+        const existingSong = database.findSongByIdAndUserId(request.params.songId, user.id);
 
-      if (!title) {
-        throw createHttpError("Song title is required.");
+        if (!existingSong) {
+          deleteUploadedFiles(resolvedUploadsPath, uploadedFilenames);
+          throw createHttpError("Song not found.", 404);
+        }
+
+        const title = String(request.body.title || "").trim();
+        const coverImage = request.files?.coverImage?.[0];
+        const backgroundVideo = request.files?.backgroundVideo?.[0];
+        const slideshowImages = request.files?.slideshowImages || [];
+
+        if (!title) {
+          deleteUploadedFiles(resolvedUploadsPath, uploadedFilenames);
+          throw createHttpError("Song title is required.");
+        }
+
+        if (backgroundVideo && slideshowImages.length > 0) {
+          deleteUploadedFiles(resolvedUploadsPath, uploadedFilenames);
+          throw createHttpError("Choose either a background video or slideshow photos, not both.");
+        }
+
+        const nextCoverFilePath = coverImage?.filename || existingSong.coverFilePath;
+        const nextCoverOriginalName = coverImage?.originalname || existingSong.coverOriginalName;
+        const nextBackgroundVideoFilePath = backgroundVideo
+          ? backgroundVideo.filename
+          : slideshowImages.length > 0
+            ? null
+            : existingSong.backgroundVideoFilePath;
+        const nextBackgroundVideoOriginalName = backgroundVideo
+          ? backgroundVideo.originalname
+          : slideshowImages.length > 0
+            ? null
+            : existingSong.backgroundVideoOriginalName;
+        const nextSlideshowImagePaths = backgroundVideo
+          ? []
+          : slideshowImages.length > 0
+            ? slideshowImages.map((file) => file.filename)
+            : existingSong.slideshowImagePaths;
+        const nextSlideshowImageOriginalNames = backgroundVideo
+          ? []
+          : slideshowImages.length > 0
+            ? slideshowImages.map((file) => file.originalname)
+            : existingSong.slideshowImageOriginalNames;
+
+        const song = database.updateSong({
+          id: existingSong.id,
+          userId: user.id,
+          title,
+          artistName: user.displayName,
+          description: String(request.body.description || "").trim(),
+          coverFilePath: nextCoverFilePath,
+          coverOriginalName: nextCoverOriginalName,
+          backgroundVideoFilePath: nextBackgroundVideoFilePath,
+          backgroundVideoOriginalName: nextBackgroundVideoOriginalName,
+          slideshowImagePaths: nextSlideshowImagePaths,
+          slideshowImageOriginalNames: nextSlideshowImageOriginalNames,
+        });
+
+        if (coverImage) {
+          deleteUploadedFile(resolvedUploadsPath, existingSong.coverFilePath);
+        }
+
+        if (backgroundVideo || slideshowImages.length > 0) {
+          deleteUploadedFile(resolvedUploadsPath, existingSong.backgroundVideoFilePath);
+          deleteUploadedFiles(resolvedUploadsPath, existingSong.slideshowImagePaths);
+        }
+
+        response.status(200).json({ song: serializeSongForViewer(song, user.id) });
+      } catch (error) {
+        deleteUploadedFiles(resolvedUploadsPath, uploadedFilenames);
+        next(error);
       }
-
-      if (!artistName) {
-        throw createHttpError("Artist name is required.");
-      }
-
-      const song = database.updateSong({
-        id: existingSong.id,
-        userId: user.id,
-        title,
-        artistName,
-        description: String(request.body.description || "").trim(),
-      });
-
-      response.status(200).json({ song: serializeSongForViewer(song, user.id) });
-    } catch (error) {
-      next(error);
-    }
-  });
+    },
+  );
 
   app.delete("/api/songs/:songId", (request, response, next) => {
     try {
