@@ -101,6 +101,56 @@ describe("auth endpoints", () => {
     expect(loginResponse.body.user.displayName).toBe("Creator");
     database.close();
   });
+
+  it("uploads a profile picture for the current user", async () => {
+    const { app, database, uploadsPath, token } = await createAuthenticatedApp();
+
+    const uploadResponse = await request(app)
+      .post("/api/profile/image")
+      .set("Authorization", `Bearer ${token}`)
+      .attach("profileImage", Buffer.from("fake profile image"), {
+        filename: "profile.png",
+        contentType: "image/png",
+      });
+
+    expect(uploadResponse.status).toBe(200);
+    expect(uploadResponse.body.user.profileImageUrl).toMatch(/\.png$/);
+
+    const meResponse = await request(app)
+      .get("/api/auth/me")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(meResponse.body.user.profileImageUrl).toBe(uploadResponse.body.user.profileImageUrl);
+
+    database.close();
+    fs.rmSync(uploadsPath, { recursive: true, force: true });
+  });
+
+  it("updates profile details and password for the current user", async () => {
+    const { app, database, token } = await createAuthenticatedApp();
+
+    const updateResponse = await request(app)
+      .patch("/api/profile")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        displayName: "New Creator",
+        currentPassword: "password123",
+        newPassword: "newpassword123",
+      });
+
+    expect(updateResponse.status).toBe(200);
+    expect(updateResponse.body.user.displayName).toBe("New Creator");
+
+    const loginResponse = await request(app).post("/api/auth/login").send({
+      email: updateResponse.body.user.email,
+      password: "newpassword123",
+    });
+
+    expect(loginResponse.status).toBe(200);
+    expect(loginResponse.body.user.displayName).toBe("New Creator");
+
+    database.close();
+  });
 });
 
 describe("song endpoints", () => {
@@ -120,6 +170,14 @@ describe("song endpoints", () => {
       .attach("coverImage", Buffer.from("fake image data"), {
         filename: "cover.png",
         contentType: "image/png",
+      })
+      .attach("slideshowImages", Buffer.from("fake slideshow image 1"), {
+        filename: "slide-1.png",
+        contentType: "image/png",
+      })
+      .attach("slideshowImages", Buffer.from("fake slideshow image 2"), {
+        filename: "slide-2.webp",
+        contentType: "image/webp",
       });
 
     expect(uploadResponse.status).toBe(201);
@@ -128,6 +186,8 @@ describe("song endpoints", () => {
       artistName: user.displayName,
       description: "A first song for discovery.",
     });
+    expect(uploadResponse.body.song.slideshowImageUrls).toHaveLength(2);
+    expect(uploadResponse.body.song.backgroundVideoUrl).toBeNull();
 
     const listResponse = await request(app)
       .get("/api/songs/mine")
@@ -203,6 +263,31 @@ describe("song endpoints", () => {
     database.close();
     fs.rmSync(uploadsPath, { recursive: true, force: true });
   });
+
+  it("accepts a background video upload", async () => {
+    const { app, database, uploadsPath, token, user } = await createAuthenticatedApp();
+
+    const uploadResponse = await request(app)
+      .post("/api/songs")
+      .set("Authorization", `Bearer ${token}`)
+      .field("title", "Video Signal")
+      .field("artistName", user.displayName)
+      .attach("audioFile", Buffer.from("fake mp3 data"), {
+        filename: "video-signal.mp3",
+        contentType: "audio/mpeg",
+      })
+      .attach("backgroundVideo", Buffer.from("fake mp4 data"), {
+        filename: "canvas.mp4",
+        contentType: "video/mp4",
+      });
+
+    expect(uploadResponse.status).toBe(201);
+    expect(uploadResponse.body.song.backgroundVideoUrl).toMatch(/\.mp4$/);
+    expect(uploadResponse.body.song.slideshowImageUrls).toHaveLength(0);
+
+    database.close();
+    fs.rmSync(uploadsPath, { recursive: true, force: true });
+  });
 });
 
 describe("discovery endpoints", () => {
@@ -230,6 +315,55 @@ describe("discovery endpoints", () => {
       followerCount: 0,
     });
 
+    const mixedSearchResponse = await request(app).get("/api/search?q=Hidden");
+
+    expect(mixedSearchResponse.status).toBe(200);
+    expect(mixedSearchResponse.body.songs[0]).toMatchObject({
+      title: "Hidden Frequency",
+      artist: {
+        id: user.id,
+        displayName: user.displayName,
+      },
+    });
+    const discoveredSongId = mixedSearchResponse.body.songs[0].id;
+
+    const likeResponse = await request(app)
+      .post(`/api/songs/${discoveredSongId}/like`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(likeResponse.status).toBe(200);
+    expect(likeResponse.body.song.likeCount).toBe(1);
+    expect(likeResponse.body.isLiked).toBe(true);
+
+    const unlikeResponse = await request(app)
+      .post(`/api/songs/${discoveredSongId}/like`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(unlikeResponse.status).toBe(200);
+    expect(unlikeResponse.body.song.likeCount).toBe(0);
+    expect(unlikeResponse.body.isLiked).toBe(false);
+
+    await request(app)
+      .post(`/api/songs/${discoveredSongId}/like`)
+      .set("Authorization", `Bearer ${token}`);
+
+    const streamResponse = await request(app)
+      .post(`/api/songs/${discoveredSongId}/stream`)
+      .send({ seconds: 42 });
+
+    expect(streamResponse.status).toBe(200);
+    expect(streamResponse.body.song.streamCount).toBe(1);
+    expect(streamResponse.body.song.listenSeconds).toBe(42);
+
+    const topSongsResponse = await request(app).get("/api/songs/top");
+
+    expect(topSongsResponse.status).toBe(200);
+    expect(topSongsResponse.body.songs[0]).toMatchObject({
+      id: discoveredSongId,
+      likeCount: 1,
+      streamCount: 1,
+    });
+
     const artistResponse = await request(app).get(`/api/artists/${user.id}`);
 
     expect(artistResponse.status).toBe(200);
@@ -254,6 +388,22 @@ describe("discovery endpoints", () => {
       followerCount: 1,
       isFollowing: true,
     });
+
+    const creatorSocialResponse = await request(app)
+      .get("/api/profile/social")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(creatorSocialResponse.status).toBe(200);
+    expect(creatorSocialResponse.body.followers).toHaveLength(1);
+    expect(creatorSocialResponse.body.followers[0].displayName).toBe("Listener");
+
+    const listenerSocialResponse = await request(app)
+      .get("/api/profile/social")
+      .set("Authorization", `Bearer ${listenerToken}`);
+
+    expect(listenerSocialResponse.status).toBe(200);
+    expect(listenerSocialResponse.body.following).toHaveLength(1);
+    expect(listenerSocialResponse.body.following[0].displayName).toBe(user.displayName);
 
     const followedArtistResponse = await request(app)
       .get(`/api/artists/${user.id}`)

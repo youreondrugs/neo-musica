@@ -27,9 +27,9 @@ describe("App", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByLabelText(/search artists/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/song title or artist name/i)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /press play/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /find a song|loading/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /this month/i })).toBeInTheDocument();
   });
 
   it("renders the register page", () => {
